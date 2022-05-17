@@ -33,8 +33,9 @@ pub fn execute_transfer(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    add: Option<Vec<String>>,
-    remove: Option<Vec<String>>,
+    recipient: String,
+    contract_address: String,
+    token_id: String,
 ) {
     // Check if sender is an admin
     
