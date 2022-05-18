@@ -1,4 +1,6 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+
+use crate::error::ContractError;
 
 
 pub fn execute_update_admins(
@@ -36,10 +38,18 @@ pub fn execute_transfer(
     recipient: String,
     contract_address: String,
     token_id: String,
-) {
-    // Check if sender is an admin
+) -> Result<Response, ContractError> {
+    // Check if sender is an operator
     
-    // Validate every address, fail if any invalid
+    // Validate the recipient address
 
-    // Perform update via map
+    // Call new the new contract to transfer ownership
+
+    Ok(Response::new()
+        // .add_submessage()
+        .add_attribute("action", "transfer_nft")
+        .add_attribute("sender", info.sender)
+        .add_attribute("recipient", recipient)
+        .add_attribute("contract_address", contract_address)
+        .add_attribute("token_id", token_id))
 }
