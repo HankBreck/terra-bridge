@@ -1,37 +1,70 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, CanonicalAddr, StdResult};
+use cw721::Cw721ReceiveMsg;
 
-use crate::error::ContractError;
-
-
-pub fn execute_update_admins(
+use crate::{
+    error::ContractError, 
+    state::{
+        ADMINS_KEY, 
+        load, 
+        save, OPERATORS_KEY,
+    }
+};
+        
+        
+pub fn try_update_super_user(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    add: Option<Vec<String>>,
-    remove: Option<Vec<String>>,
-) {
-    // Check if sender is an admin
+    is_admin: bool,
+    add_list: Option<Vec<String>>,
+    remove_list: Option<Vec<String>>,
+) -> Result<Response, ContractError> {
     
-    // Validate every address, fail if any invalid
+    // Local state variables
+    let storage_key = if is_admin { ADMINS_KEY } else { OPERATORS_KEY };
+    let mut save_it = false;
+    
+    // Check if sender is an admin
+    let admins: Vec<CanonicalAddr> = load(deps.storage, ADMINS_KEY)?;
+    let sender_raw = deps.api.addr_canonicalize(&info.sender.to_string())?;
+    if !admins.contains(&sender_raw) {
+        return Err(ContractError::Unauthorized {});
+    }
 
-    // Perform update via map
+    // Determine whether to update admins or operators
+    let mut source_list = if is_admin { admins } else { load(deps.storage, OPERATORS_KEY)? };
+
+    // Add all add_list addresses from storage
+    for addr in add_list.unwrap_or_default().iter() {
+        // Validate address and convert to raw address
+        let addr_raw = deps.api.addr_canonicalize(addr)?;
+        if !source_list.contains(&addr_raw) {
+            source_list.push(addr_raw);
+            save_it = true;
+        }
+    };
+
+    // Remove all remove_list addresses from storage
+    let original_len = source_list.len();
+    let to_remove = remove_list
+        .unwrap_or_default()
+        .iter()
+        .map(|addr| deps.api.addr_canonicalize(addr)) // also validates each address
+        .collect::<StdResult<Vec<CanonicalAddr>>>()?;
+    source_list.retain(|addr| !to_remove.contains(addr));
+    // Only update storage if the list has changed
+    if original_len > source_list.len() {
+        save_it = true;
+    }
+
+    if save_it {
+        save(deps.storage, storage_key, &source_list)?;
+    }
+    
+    Ok(Response::default())
 }
 
-pub fn execute_update_operators(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    add: Option<Vec<String>>,
-    remove: Option<Vec<String>>,
-) {
-    // Check if sender is an admin
-    
-    // Validate every address, fail if any invalid
-
-    // Perform update via map
-}
-
-pub fn execute_transfer(
+pub fn try_release_nft(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -52,4 +85,15 @@ pub fn execute_transfer(
         .add_attribute("recipient", recipient)
         .add_attribute("contract_address", contract_address)
         .add_attribute("token_id", token_id))
+}
+
+pub fn try_receive_nft(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    receive_msg: Cw721ReceiveMsg,
+) -> Result<Response, ContractError> {
+
+
+    Ok(Response::default())
 }

@@ -1,12 +1,16 @@
-use cosmwasm_std::{Addr, Storage};
-use cw_storage_plus::{Map, U8Key, Item};
-use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use std::any::type_name;
 
-use crate::error::ContractError;
+use cosmwasm_std::{Addr, Storage, StdResult, StdError};
+use cw_storage_plus::{Map};
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize, de::DeserializeOwned};
+
+
+// TODO: 
+// * Whitelist of projects that can cross
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-struct TokenInfo {
+pub struct TokenInfo {
     /// The address of the destination contract on Secret Network
     secret_address: Addr,
     /// The address of the user that sent the token to the bridge
@@ -19,35 +23,53 @@ struct TokenInfo {
 pub const TOKENS: Map<(&Addr, &str), TokenInfo> = Map::new("tokens_locked");
 
 
-/**
- * Admin State
+/*
+ * 
+ * Auth State
+ * 
  */
 
-/// mapping of u8 -> admin_address
-pub const ADMINS: Map<U8Key, Addr> = Map::new("admins");
-/// counter used to create U8Keys
-pub const ADMIN_COUNTER: Item<u8> = Item::new("admin_counter");
-/// function to grab the next key for ADMINS
-pub fn next_admin_counter(store: &mut dyn Storage) -> Result<u8, ContractError> {
-    let id = ADMIN_COUNTER.may_load(store)?.unwrap_or_default() + 1;
-    ADMIN_COUNTER.save(store, &id);
-    Ok(id)
-}
+/// Key to access the list of admins
+/// * `ADMINS`: Vec\<CanonicalAddr>
+pub const ADMINS_KEY: &[u8] = b"admins";
+/// Key to access the list of operators
+/// * `OPERATORS`: Vec\<CanonicalAddr>
+pub const OPERATORS_KEY: &[u8] = b"operators";
 
-/**
- * Operator State
+
+
+/*
+ * 
+ *  Taken from Stashh's bridge escrow contract
+ * 
  */
 
-pub const OPERATORS: Map<U8Key, Addr> = Map::new("admins");
-/// counter used to create U8Keys
-pub const OPERATOR_COUNTER: Item<u8> = Item::new("admin_counter");
-/// function to grab the next key for OPERATORS
-pub fn next_operator_counter(store: &mut dyn Storage) -> Result<u8, ContractError> {
-    let id = OPERATOR_COUNTER.may_load(store)?.unwrap_or_default() + 1;
-    OPERATOR_COUNTER.save(store, &id);
-    Ok(id)
+/// Returns StdResult<()> resulting from saving an item to storage
+///
+/// # Arguments
+///
+/// * `storage` - a mutable reference to the storage this item should go to
+/// * `key` - a byte slice representing the key to access the stored item
+/// * `value` - a reference to the item to store
+pub fn save<T: Serialize>(storage: &mut dyn Storage, key: &[u8], value: &T) -> StdResult<()> {
+    storage.set(
+        key, 
+        &bincode2::serialize(value).map_err(|e| StdError::serialize_err(type_name::<T>(), e))?,
+    );
+    Ok(())
 }
 
-
-// TODO: 
-// * Whitelist of projects that can cross
+/// Returns StdResult<T> from retrieving the item with the specified key.  Returns a
+/// StdError::NotFound if there is no item with that key
+///
+/// # Arguments
+///
+/// * `storage` - a reference to the storage this item is in
+/// * `key` - a byte slice representing the key that accesses the stored item
+pub fn load<T: DeserializeOwned>(storage: &mut dyn Storage, key: &[u8]) -> StdResult<T> {
+    bincode2::deserialize(
+        &storage
+            .get(key)
+            .ok_or_else(|| StdError::not_found(type_name::<T>()))?,
+    ).map_err(|e| StdError::parse_err(type_name::<T>(), e))
+}

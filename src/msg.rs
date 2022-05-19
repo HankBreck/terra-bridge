@@ -1,11 +1,14 @@
 use cosmwasm_std::{Addr};
+use cw721::Cw721ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub admins: Vec<Addr>,
-    pub operators: Vec<Addr>,
+    /// Initial admin addresses
+    pub admins: Vec<String>,
+    /// Initial operator addresses
+    pub operators: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -29,18 +32,20 @@ pub enum ExecuteMsg {
         remove: Option<Vec<String>>,
     },
 
-    // Operator messages
-
     /// Transfer ownership of NFT to the new owner
     /// * contract_address, token_id is the key for our NFTs
-    Transfer {
+    ReleaseNft {
         /// Address of the recipient
         recipient: String,
         /// The contract address for the NFT
         contract_address: String,
         /// The token_id for the NFT
         token_id: String,
-    }
+    },
+
+    /// Accept cw721 NFT 
+    /// * https://docs.cosmwasm.com/cw-plus/0.9.0/cw721/spec/#receiver
+    ReceiveNft(Cw721ReceiveMsg),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
