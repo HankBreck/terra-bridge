@@ -1,7 +1,7 @@
-use cosmwasm_std::{Addr};
+use cosmwasm_std::Addr;
 use cw721::Cw721ReceiveMsg;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -15,9 +15,8 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     // Admin messages
-
     /// Update the contract's admins
-    UpdateAdmins { 
+    UpdateAdmins {
         /// The addresses to add
         add: Option<Vec<String>>,
         /// The addresses to remove
@@ -43,7 +42,7 @@ pub enum ExecuteMsg {
         token_id: String,
     },
 
-    /// Accept cw721 NFT 
+    /// Accept cw721 NFT
     /// * https://docs.cosmwasm.com/cw-plus/0.9.0/cw721/spec/#receiver
     ReceiveNft(Cw721ReceiveMsg),
 }
@@ -53,28 +52,28 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Returns all of the contract's admins.
     /// `start_after` and `limit` are required for pagination.
-    AllAdmins { 
+    AllAdmins {
         /// The last admin address returned in the previous query
-        start_after: Option<String>, 
+        start_after: Option<String>,
         /// The maximum number of addresses to return
         limit: Option<u32>,
     },
 
     /// Returns all of the contract's operators.
     /// `start_after` and `limit` are required for pagination.
-    AllOperators { 
+    AllOperators {
         /// The last admin address returned in the previous query
-        start_after: Option<String>, 
+        start_after: Option<String>,
         /// The maximum number of addresses to return
         limit: Option<u32>,
     },
 
     /// Return all of the NFTs stored in the contract
     /// `start_after` and `limit` are required for pagination.
-    AllNfts { 
-       /// The last admin address returned in the previous query
-       start_after: Option<String>, 
-       /// The maximum number of addresses to return
-       limit: Option<u32>,
+    AllNfts {
+        /// The last admin address returned in the previous query
+        start_after: Option<String>,
+        /// The maximum number of addresses to return
+        limit: Option<u32>,
     },
 }

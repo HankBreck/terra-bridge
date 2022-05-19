@@ -1,12 +1,11 @@
 use std::any::type_name;
 
-use cosmwasm_std::{Addr, Storage, StdResult, StdError};
-use cw_storage_plus::{Map};
+use cosmwasm_std::{Addr, StdError, StdResult, Storage};
+use cw_storage_plus::Map;
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-
-// TODO: 
+// TODO:
 // * Whitelist of projects that can cross
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -22,11 +21,10 @@ pub struct TokenInfo {
 /// mapping of (contract_address, token_id) -> TokenInfo
 pub const TOKENS: Map<(&Addr, &str), TokenInfo> = Map::new("tokens_locked");
 
-
 /*
- * 
+ *
  * Auth State
- * 
+ *
  */
 
 /// Key to access the list of admins
@@ -36,12 +34,10 @@ pub const ADMINS_KEY: &[u8] = b"admins";
 /// * `OPERATORS`: Vec\<CanonicalAddr>
 pub const OPERATORS_KEY: &[u8] = b"operators";
 
-
-
 /*
- * 
+ *
  *  Taken from Stashh's bridge escrow contract
- * 
+ *
  */
 
 /// Returns StdResult<()> resulting from saving an item to storage
@@ -53,7 +49,7 @@ pub const OPERATORS_KEY: &[u8] = b"operators";
 /// * `value` - a reference to the item to store
 pub fn save<T: Serialize>(storage: &mut dyn Storage, key: &[u8], value: &T) -> StdResult<()> {
     storage.set(
-        key, 
+        key,
         &bincode2::serialize(value).map_err(|e| StdError::serialize_err(type_name::<T>(), e))?,
     );
     Ok(())
@@ -71,5 +67,6 @@ pub fn load<T: DeserializeOwned>(storage: &mut dyn Storage, key: &[u8]) -> StdRe
         &storage
             .get(key)
             .ok_or_else(|| StdError::not_found(type_name::<T>()))?,
-    ).map_err(|e| StdError::parse_err(type_name::<T>(), e))
+    )
+    .map_err(|e| StdError::parse_err(type_name::<T>(), e))
 }

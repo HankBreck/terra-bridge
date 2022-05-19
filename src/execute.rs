@@ -1,16 +1,11 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, CanonicalAddr, StdResult};
+use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw721::Cw721ReceiveMsg;
 
 use crate::{
-    error::ContractError, 
-    state::{
-        ADMINS_KEY, 
-        load, 
-        save, OPERATORS_KEY,
-    }
+    error::ContractError,
+    state::{load, save, ADMINS_KEY, OPERATORS_KEY},
 };
-        
-        
+
 pub fn try_update_super_user(
     deps: DepsMut,
     env: Env,
@@ -19,11 +14,10 @@ pub fn try_update_super_user(
     add_list: Option<Vec<String>>,
     remove_list: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
-    
     // Local state variables
     let storage_key = if is_admin { ADMINS_KEY } else { OPERATORS_KEY };
     let mut save_it = false;
-    
+
     // Check if sender is an admin
     let admins: Vec<CanonicalAddr> = load(deps.storage, ADMINS_KEY)?;
     let sender_raw = deps.api.addr_canonicalize(&info.sender.to_string())?;
@@ -32,7 +26,11 @@ pub fn try_update_super_user(
     }
 
     // Determine whether to update admins or operators
-    let mut source_list = if is_admin { admins } else { load(deps.storage, OPERATORS_KEY)? };
+    let mut source_list = if is_admin {
+        admins
+    } else {
+        load(deps.storage, OPERATORS_KEY)?
+    };
 
     // Add all add_list addresses from storage
     for addr in add_list.unwrap_or_default().iter() {
@@ -42,7 +40,7 @@ pub fn try_update_super_user(
             source_list.push(addr_raw);
             save_it = true;
         }
-    };
+    }
 
     // Remove all remove_list addresses from storage
     let original_len = source_list.len();
@@ -60,7 +58,7 @@ pub fn try_update_super_user(
     if save_it {
         save(deps.storage, storage_key, &source_list)?;
     }
-    
+
     Ok(Response::default())
 }
 
@@ -73,7 +71,7 @@ pub fn try_release_nft(
     token_id: String,
 ) -> Result<Response, ContractError> {
     // Check if sender is an operator
-    
+
     // Validate the recipient address
 
     // Call new the new contract to transfer ownership
@@ -93,7 +91,5 @@ pub fn try_receive_nft(
     info: MessageInfo,
     receive_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
-
-
     Ok(Response::default())
 }

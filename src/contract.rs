@@ -1,12 +1,9 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult};
 
 use crate::{
-    msg::{
-        InstantiateMsg, ExecuteMsg
-    }, 
-    execute::{
-        try_update_super_user, try_release_nft, try_receive_nft
-    }, error::ContractError
+    error::ContractError,
+    execute::{try_receive_nft, try_release_nft, try_update_super_user},
+    msg::{ExecuteMsg, InstantiateMsg},
 };
 
 // add entrypoint
@@ -17,7 +14,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     // instantiate the contract with all admins, operators, and empty tokens vector
-    
+
     Ok(Response::default())
 }
 
@@ -29,20 +26,18 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::UpdateAdmins { 
-            add, 
-            remove 
-        } => try_update_super_user(deps, env, info, true, add, remove),
+        ExecuteMsg::UpdateAdmins { add, remove } => {
+            try_update_super_user(deps, env, info, true, add, remove)
+        }
 
-        ExecuteMsg::UpdateOperators { 
-            add, 
-            remove 
-        } => try_update_super_user(deps, env, info, false, add, remove),
+        ExecuteMsg::UpdateOperators { add, remove } => {
+            try_update_super_user(deps, env, info, false, add, remove)
+        }
 
-        ExecuteMsg::ReleaseNft { 
-            recipient, 
-            contract_address, 
-            token_id 
+        ExecuteMsg::ReleaseNft {
+            recipient,
+            contract_address,
+            token_id,
         } => try_release_nft(deps, env, info, recipient, contract_address, token_id),
 
         ExecuteMsg::ReceiveNft(receive_msg) => try_receive_nft(deps, env, info, receive_msg),
