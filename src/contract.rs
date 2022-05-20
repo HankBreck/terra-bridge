@@ -1,24 +1,24 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, entry_point, Deps};
 
 use crate::{
     error::ContractError,
     execute::{try_receive_nft, try_release_nft, try_update_super_user},
-    msg::{ExecuteMsg, InstantiateMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg}, query::query_all_admins,
 };
 
-// add entrypoint
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     // instantiate the contract with all admins, operators, and empty tokens vector
 
     Ok(Response::default())
 }
 
-// add entrypoint
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -42,6 +42,27 @@ pub fn execute(
 
         ExecuteMsg::ReceiveNft(receive_msg) => try_receive_nft(deps, env, info, receive_msg),
     }
+}
+
+#[entry_point]
+pub fn query(
+    deps: Deps,
+    env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::AllAdmins {} => query_all_admins()
+    }
+}
+
+#[entry_point]
+pub fn migrate(
+    deps: DepsMut,
+    env: Env,
+    msg: MigrateMsg,
+) -> StdResult<Response> {
+
+    Ok(Response::default())
 }
 
 // add entrypoint for CW721Receive

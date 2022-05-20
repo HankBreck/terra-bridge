@@ -8,6 +8,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 // TODO:
 // * Whitelist of projects that can cross
 
+/// Structure to hold information about a given NFT
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct TokenInfo {
     /// The address of the destination contract on Secret Network
@@ -62,7 +63,7 @@ pub fn save<T: Serialize>(storage: &mut dyn Storage, key: &[u8], value: &T) -> S
 ///
 /// * `storage` - a reference to the storage this item is in
 /// * `key` - a byte slice representing the key that accesses the stored item
-pub fn load<T: DeserializeOwned>(storage: &mut dyn Storage, key: &[u8]) -> StdResult<T> {
+pub fn load<T: DeserializeOwned>(storage: &dyn Storage, key: &[u8]) -> StdResult<T> {
     bincode2::deserialize(
         &storage
             .get(key)
