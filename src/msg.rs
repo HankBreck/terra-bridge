@@ -71,24 +71,24 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct AdminsResponse {
     /// A list of all contract admins
-    admins: Vec<Addr>,
+    pub admins: Vec<Addr>,
 }
 
 /// Shows the contract's operators
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct OperatorsResponse {
     /// A list of all contract operators
-    operators: Vec<Addr>,
+    pub operators: Vec<Addr>,
 }
 
 /// Shows all token_ids for a given collection
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct HistoryByTokenResponse {
     /// Information about an NFT from a given collection
-    history: BridgeHistory,
+    pub history: BridgeHistory,
 }
 
-
+/// TODO: Test migration
 pub struct MigrateMsg {
-    foo: String,
+    pub foo: String,
 }

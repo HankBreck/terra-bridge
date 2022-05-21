@@ -3,12 +3,11 @@ use cw721::Cw721ReceiveMsg;
 
 use crate::{
     error::ContractError,
-    state::{load, save},
+    state::{ADMINS, OPERS},
 };
 
 pub fn try_update_super_user(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     is_admin: bool,
     add_list: Option<Vec<String>>,
@@ -16,11 +15,10 @@ pub fn try_update_super_user(
 ) -> Result<Response, ContractError> {
 
     // Local state variables
-    let storage_key = if is_admin { ADMINS_KEY } else { OPERATORS_KEY };
     let mut save_it = false;
 
     // Check if sender is an admin
-    let admins: Vec<CanonicalAddr> = load(deps.storage, ADMINS_KEY)?;
+    let admins: Vec<CanonicalAddr> = ADMINS.load(deps.storage)?;
     let sender_raw = deps.api.addr_canonicalize(&info.sender.to_string())?;
     if !admins.contains(&sender_raw) {
         return Err(ContractError::Unauthorized {});
@@ -30,7 +28,7 @@ pub fn try_update_super_user(
     let mut source_list = if is_admin {
         admins
     } else {
-        load(deps.storage, OPERATORS_KEY)?
+        OPERS.load(deps.storage)?
     };
 
     // Add all add_list addresses from storage
@@ -51,16 +49,24 @@ pub fn try_update_super_user(
         .map(|addr| deps.api.addr_canonicalize(addr)) // also validates each address
         .collect::<StdResult<Vec<CanonicalAddr>>>()?;
     source_list.retain(|addr| !to_remove.contains(addr));
-    // Only update storage if the list has changed
     if original_len > source_list.len() {
         save_it = true;
     }
 
+    // Only update storage source_list changed
     if save_it {
-        save(deps.storage, storage_key, &source_list)?;
+        if is_admin {
+            ADMINS.save(deps.storage, &source_list)?;
+        } else {
+            OPERS.save(deps.storage, &source_list)?;
+        }
     }
 
-    Ok(Response::default())
+    let action = format!("update_{}", if is_admin {"admins"} else {"operators"});
+
+    // TODO: Add response attributes
+    Ok(Response::default()
+        .add_attribute("action", action))
 }
 
 pub fn try_release_nft(
@@ -92,5 +98,6 @@ pub fn try_receive_nft(
     info: MessageInfo,
     receive_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
+    
     Ok(Response::default())
 }

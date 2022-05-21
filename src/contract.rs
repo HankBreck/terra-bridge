@@ -27,11 +27,11 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::UpdateAdmins { add, remove } => {
-            try_update_super_user(deps, env, info, true, add, remove)
+            try_update_super_user(deps, info, true, add, remove)
         }
 
         ExecuteMsg::UpdateOperators { add, remove } => {
-            try_update_super_user(deps, env, info, false, add, remove)
+            try_update_super_user(deps, info, false, add, remove)
         }
 
         ExecuteMsg::ReleaseNft {
