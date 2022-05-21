@@ -3,7 +3,7 @@ use cw721::Cw721ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::TokenInfo;
+use crate::state::BridgeHistory;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -53,27 +53,13 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Lists the contract's admins
-    AllAdmins { },
+    Admins { },
 
     /// Lists the contract's operators
-    AllOperators { },
-
-    /// List all of the NFTs stored in the contract for a given collection
-    /// `start_after` and `limit` are required for pagination.
-    AllNfts {
-        /// The address of the collection you wish to view
-        collection_address: String,
-        /// unset or false will filter out NFTs that have been bridged,
-        /// you must set to true to see them
-        include_bridged: Option<bool>,
-        /// The last admin address returned in the previous query
-        start_after: Option<String>,
-        /// The maximum number of addresses to return
-        limit: Option<u32>,
-    },
+    Operators { },
 
     /// Lists the information for a given NFT
-    NftInfo {
+    HistoryByToken {
         /// The address of the collection you wish to view
         collection_address: String,
         /// The token_id of the NFT
@@ -97,16 +83,9 @@ pub struct OperatorsResponse {
 
 /// Shows all token_ids for a given collection
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct AllNftsResponse {
-    /// A list of token_ids
-    tokens: Vec<String>,
-}
-
-/// Shows all token_ids for a given collection
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct NftInfoResponse {
+pub struct HistoryByTokenResponse {
     /// Information about an NFT from a given collection
-    info: TokenInfo,
+    history: BridgeHistory,
 }
 
 

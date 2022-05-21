@@ -1,45 +1,67 @@
 use std::any::type_name;
 
-use cosmwasm_std::{Addr, StdError, StdResult, Storage};
-use cw_storage_plus::Map;
+use cosmwasm_std::{Addr, StdError, StdResult, Storage, CanonicalAddr};
+use cw_storage_plus::{Map, Item};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 // TODO:
 // * Whitelist of projects that can cross
 
-/// Structure to hold information about a given NFT
+/// Storage for the history of a tokens bridging activity
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct TokenInfo {
-    /// The address of the destination contract on Secret Network
-    secret_address: Addr,
-    /// The address of the user that sent the token to the bridge
-    sender: Addr,
-    /// Whether the token has been successfully bridged to Secret Network
-    is_bridged: bool,
+pub struct BridgeHistory {
+    /// true if the token has been successfully bridged to SN
+    pub is_bridged: bool,
+    /// true if the token has been released from the bridge
+    pub is_released: bool,
+    /// id of bridged token
+    pub token_id: String,
+    /// the network the external collection is on
+    pub network_id: String,
+    /// the Terra address involved in the bridge tx
+    pub source_address: String,
+    /// the address of the Terra collection
+    pub source_collection: Option<String>,
+    /// the address of the SN collection
+    pub destination_collection: Option<String>,
+    /// the Terra block of the tx
+    pub block_height: u64,
+    /// the time (in seconds since 01/01/1970) of tx
+    pub block_time: u64,
 }
-
-/// mapping of (contract_address, token_id) -> TokenInfo
-pub const TOKENS: Map<(&Addr, &str), TokenInfo> = Map::new("tokens_locked");
 
 /*
  *
- * Auth State
+ * Contract State
  *
  */
 
-/// Key to access the list of admins
-/// * `ADMINS`: Vec\<CanonicalAddr>
-pub const ADMINS_KEY: &[u8] = b"admins";
-/// Key to access the list of operators
-/// * `OPERATORS`: Vec\<CanonicalAddr>
-pub const OPERATORS_KEY: &[u8] = b"operators";
+/// Vector of admins' raw addresses
+pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
+/// Vector of operators' raw addresses
+pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
+/// Mapping of a Secret Network contract's raw address to a local chain's contract raw address
+pub const S_TO_C_MAP: Map<CanonicalAddr, CanonicalAddr> = Map::new("s_to_c");
+/// Mapping of (contract_address, token_id) -> BridgeHistory
+/// Current state of the bridged token
+pub const HISTORY: Map<(&Addr, &str), BridgeHistory> = Map::new("bridge_history");
+
 
 /*
  *
  *  Taken from Stashh's bridge escrow contract
  *
  */
+
+ /// network and address of an external collection
+#[derive(Serialize, Deserialize)]
+pub struct ExternInfo {
+    /// network the collection is on
+    pub network: String,
+    /// address of the collection
+    pub address: String,
+}
 
 /// Returns StdResult<()> resulting from saving an item to storage
 ///

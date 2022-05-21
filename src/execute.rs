@@ -3,7 +3,7 @@ use cw721::Cw721ReceiveMsg;
 
 use crate::{
     error::ContractError,
-    state::{load, save, ADMINS_KEY, OPERATORS_KEY},
+    state::{load, save},
 };
 
 pub fn try_update_super_user(
@@ -14,6 +14,7 @@ pub fn try_update_super_user(
     add_list: Option<Vec<String>>,
     remove_list: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
+
     // Local state variables
     let storage_key = if is_admin { ADMINS_KEY } else { OPERATORS_KEY };
     let mut save_it = false;

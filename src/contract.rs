@@ -1,9 +1,9 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, entry_point, Deps};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, entry_point, Deps, Binary, StdError};
 
 use crate::{
     error::ContractError,
     execute::{try_receive_nft, try_release_nft, try_update_super_user},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg}, query::query_all_admins,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg}, query::{query_operators, query_admins},
 };
 
 #[entry_point]
@@ -49,9 +49,12 @@ pub fn query(
     deps: Deps,
     env: Env,
     msg: QueryMsg,
-) -> Result<Binary, ContractError> {
+) -> StdResult<Binary> {
     match msg {
-        QueryMsg::AllAdmins {} => query_all_admins()
+        QueryMsg::Admins { } => query_admins(deps, env),
+        QueryMsg::Operators { } => query_operators(deps, env),
+        QueryMsg::HistoryByToken { collection_address, token_id } => query_operators(deps, env),
+
     }
 }
 
