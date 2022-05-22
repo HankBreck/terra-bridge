@@ -1,7 +1,7 @@
 use std::any::type_name;
 
 use cosmwasm_std::{Addr, StdError, StdResult, Storage, CanonicalAddr};
-use cw_storage_plus::{Map, Item};
+use cw_storage_plus::{Map, Item, IndexedMap, IndexList, Index, U64Key, MultiIndex};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -10,21 +10,19 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// Storage for the history of a tokens bridging activity
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct BridgeHistory {
+pub struct BridgeRecord {
     /// true if the token has been successfully bridged to SN
     pub is_bridged: bool,
     /// true if the token has been released from the bridge
     pub is_released: bool,
     /// id of bridged token
     pub token_id: String,
-    /// the network the external collection is on
-    pub network_id: String,
-    /// the Terra address involved in the bridge tx
-    pub source_address: String,
+    /// the Terra address that initiated the SendMsg request
+    pub source_address: Addr,
     /// the address of the Terra collection
-    pub source_collection: Option<String>,
+    pub source_collection: Addr,
     /// the address of the SN collection
-    pub destination_collection: Option<String>,
+    pub destination_collection: Addr,
     /// the Terra block of the tx
     pub block_height: u64,
     /// the time (in seconds since 01/01/1970) of tx
@@ -41,16 +39,41 @@ pub struct BridgeHistory {
 pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 /// Vector of operators' raw addresses
 pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
-/// Mapping of a Secret Network contract's raw address to a local chain's contract raw address
-pub const S_TO_C_MAP: Map<CanonicalAddr, CanonicalAddr> = Map::new("s_to_c");
-/// Mapping of (contract_address, token_id) -> BridgeHistory
-/// Current state of the bridged token
-pub const HISTORY: Map<(&Addr, &str), BridgeHistory> = Map::new("bridge_history");
+/// Mapping of a Secret Network contract's raw address (as bytes) 
+/// to a local chain's contract raw address (as bytes)
+pub const C_TO_S_MAP: Map<&str, Addr> = Map::new("c_to_s");
+
+pub struct BridgeIndexes<'a> {
+    pub coll_token_id: MultiIndex<'a, (Addr, String, U64Key), BridgeRecord>,
+}
+
+impl<'a> IndexList<BridgeRecord> for BridgeIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<BridgeRecord>> + '_> {
+        let v: Vec<&dyn Index<BridgeRecord>> = vec![&self.coll_token_id];
+        Box::new(v.into_iter())
+    }
+}
+
+/// Mapping of history_id -> BridgeRecord
+/// * Indexed by (source_collection, token_id, history_id)
+pub fn history<'a>() -> IndexedMap<'a, U64Key, BridgeRecord, BridgeIndexes<'a>> {
+    let indexes = BridgeIndexes {
+        coll_token_id: MultiIndex::new(
+            |rec: &BridgeRecord, pk| (rec.source_address.clone(), rec.token_id.clone(), pk.into()),
+            "bridge_record",
+            "bridge__coll_token_id",
+        ),
+    };
+    IndexedMap::new("bridge_record", indexes)
+}
+
+pub const DEFAULT_LIMIT: u8 = 15;
+pub const MAX_LIMIT: u8 = 30;
 
 
 /*
  *
- *  Taken from Stashh's bridge escrow contract
+ *  Taken from Stashh's SN bridge escrow contract
  *
  */
 

@@ -3,7 +3,8 @@ use cw721::Cw721ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::BridgeHistory;
+use crate::state::BridgeRecord;
+
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -85,7 +86,7 @@ pub struct OperatorsResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct HistoryByTokenResponse {
     /// Information about an NFT from a given collection
-    pub history: BridgeHistory,
+    pub history: BridgeRecord,
 }
 
 /// TODO: Test migration

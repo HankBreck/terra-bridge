@@ -1,7 +1,8 @@
-use cosmwasm_std::{Addr, to_binary, Binary, Deps, Env, CanonicalAddr, StdResult};
+use cosmwasm_std::{Addr, to_binary, Binary, Deps, Env, CanonicalAddr, StdResult, Order};
 use cw0::maybe_addr;
+use cw_storage_plus::Bound;
 
-use crate::{error::ContractError, msg::{AdminsResponse, OperatorsResponse}, state::{load, OPERS, ADMINS, HISTORY, BridgeHistory}};
+use crate::{msg::{AdminsResponse, OperatorsResponse}, state::{OPERS, ADMINS, BridgeRecord, DEFAULT_LIMIT, MAX_LIMIT, history}, error::ContractError};
 
 
 /*
@@ -47,10 +48,25 @@ pub fn query_operators(
 pub fn query_history(
     deps: Deps,
     env: Env,
-    collection_address: &str, 
-    token_id: &str,
+    collection_address: String,
+    token_id: String,
+    start_after: Option<u8>,
+    limit: Option<u8>,
 ) -> StdResult<Binary> {
-    let addr = deps.api.addr_validate(collection_address)?;
-    let history: BridgeHistory = HISTORY.load(deps.storage, (&addr, token_id))?;
+    let addr = deps.api.addr_validate(&collection_address)?;
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(|s| Bound::Exclusive(vec![s]));
+
+    // Fetch history from storage
+    let history = history()
+        .idx
+        .coll_token_id
+        .prefix((addr, token_id))
+        .range(deps.storage, start, None, Order::Ascending)
+        .take(limit)
+        // Separate the records from the indexes
+        .map(|item| item.and_then(|vals| Ok(vals.1)))
+        .collect::<StdResult<Vec<_>>>()?;
+
     to_binary(&history)
 }
