@@ -1,7 +1,7 @@
 use std::any::type_name;
 
-use cosmwasm_std::{Addr, StdError, StdResult, Storage, CanonicalAddr};
-use cw_storage_plus::{Map, Item, IndexedMap, IndexList, Index, U64Key, MultiIndex};
+use cosmwasm_std::{Addr, CanonicalAddr, StdError, StdResult, Storage};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, U64Key};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -47,12 +47,11 @@ pub const HISTORY_PK_NAMESPACE: &str = "history_pk";
 pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 /// Vector of operators' raw addresses
 pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
-/// Mapping of a Secret Network contract's raw address (as bytes) 
+/// Mapping of a Secret Network contract's raw address (as bytes)
 /// to a local chain's contract raw address (as bytes)
 pub const C_TO_S_MAP: Map<&str, Addr> = Map::new("c_to_s");
 /// counter to track the primary key for the history IndexedMap
 pub const HISTORY_PK: Item<u64> = Item::new(HISTORY_PK_NAMESPACE);
-
 
 pub struct BridgeIndexes<'a> {
     pub coll_token_id: MultiIndex<'a, (Addr, String, U64Key), BridgeRecord>,
@@ -84,14 +83,13 @@ pub fn next_history_pk(store: &mut dyn Storage) -> StdResult<u64> {
     Ok(id)
 }
 
-
 /*
  *
  *  Taken from Stashh's SN bridge escrow contract
  *
  */
 
- /// network and address of an external collection
+/// network and address of an external collection
 #[derive(Serialize, Deserialize)]
 pub struct ExternInfo {
     /// network the collection is on
