@@ -54,7 +54,9 @@ pub fn instantiate(
     ADMINS.save(deps.storage, &admins_valid)?;
     OPERS.save(deps.storage, &opers_valid)?;
 
-    Ok(Response::default())
+    Ok(Response::default()
+        .add_attribute("action", "instantiate")
+        .add_attribute("sender", info.sender.to_string()))
 }
 
 #[entry_point]
@@ -86,10 +88,10 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Admins {} => query_admins(deps, env),
-        QueryMsg::Operators {} => query_operators(deps, env),
+        QueryMsg::Admins {} => query_admins(deps),
+        QueryMsg::Operators {} => query_operators(deps),
         QueryMsg::HistoryByToken {
             collection_address,
             token_id,
