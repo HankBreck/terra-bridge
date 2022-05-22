@@ -47,15 +47,14 @@ pub fn query_operators(
 /// ADD REAL DOCS
 pub fn query_history(
     deps: Deps,
-    env: Env,
     collection_address: String,
     token_id: String,
-    start_after: Option<u8>,
+    start_after: Option<u64>,
     limit: Option<u8>,
 ) -> StdResult<Binary> {
     let addr = deps.api.addr_validate(&collection_address)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(|s| Bound::Exclusive(vec![s]));
+    let start = start_after.map(|s| Bound::Exclusive(s.to_be_bytes().into()));
 
     // Fetch history from storage
     let history = history()

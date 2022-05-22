@@ -65,6 +65,12 @@ pub enum QueryMsg {
         collection_address: String,
         /// The token_id of the NFT
         token_id: String,
+        /// The last element from the previous query. 
+        /// Used in pagination.
+        start_after: Option<u64>,
+        /// The maximum number of records to show.
+        /// Used in pagination.
+        limit: Option<u8>,
     }
 }
 
