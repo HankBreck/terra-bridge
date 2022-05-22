@@ -35,6 +35,14 @@ pub struct BridgeRecord {
  *
  */
 
+pub const DEFAULT_LIMIT: u8 = 15;
+pub const MAX_LIMIT: u8 = 30;
+
+// Keys
+/// Key for HISTORY_PK
+pub const HISTORY_PK_NAMESPACE: &str = "history_pk";
+
+// Storage
 /// Vector of admins' raw addresses
 pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 /// Vector of operators' raw addresses
@@ -42,6 +50,9 @@ pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
 /// Mapping of a Secret Network contract's raw address (as bytes) 
 /// to a local chain's contract raw address (as bytes)
 pub const C_TO_S_MAP: Map<&str, Addr> = Map::new("c_to_s");
+/// counter to track the primary key for the history IndexedMap
+pub const HISTORY_PK: Item<u64> = Item::new(HISTORY_PK_NAMESPACE);
+
 
 pub struct BridgeIndexes<'a> {
     pub coll_token_id: MultiIndex<'a, (Addr, String, U64Key), BridgeRecord>,
@@ -60,15 +71,18 @@ pub fn history<'a>() -> IndexedMap<'a, U64Key, BridgeRecord, BridgeIndexes<'a>> 
     let indexes = BridgeIndexes {
         coll_token_id: MultiIndex::new(
             |rec: &BridgeRecord, pk| (rec.source_address.clone(), rec.token_id.clone(), pk.into()),
-            "bridge_record",
+            HISTORY_PK_NAMESPACE,
             "bridge__coll_token_id",
         ),
     };
-    IndexedMap::new("bridge_record", indexes)
+    IndexedMap::new(HISTORY_PK_NAMESPACE, indexes)
 }
 
-pub const DEFAULT_LIMIT: u8 = 15;
-pub const MAX_LIMIT: u8 = 30;
+pub fn next_history_pk(store: &mut dyn Storage) -> StdResult<u64> {
+    let id: u64 = HISTORY_PK.load(store)? + 1;
+    HISTORY_PK.save(store, &id)?;
+    Ok(id)
+}
 
 
 /*

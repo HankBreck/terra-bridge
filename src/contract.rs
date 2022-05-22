@@ -40,7 +40,7 @@ pub fn execute(
             token_id,
         } => try_release_nft(deps, env, info, recipient, contract_address, token_id),
 
-        ExecuteMsg::ReceiveNft(receive_msg) => try_receive_nft(deps, env, info, receive_msg.sender, receive_msg.token_id, receive_msg.msg),
+        ExecuteMsg::ReceiveNft(receive_msg) => try_receive_nft(deps, env, info, receive_msg.sender, receive_msg.token_id),
     }
 }
 
@@ -54,7 +54,6 @@ pub fn query(
         QueryMsg::Admins { } => query_admins(deps, env),
         QueryMsg::Operators { } => query_operators(deps, env),
         QueryMsg::HistoryByToken { collection_address, token_id } => query_operators(deps, env),
-
     }
 }
 

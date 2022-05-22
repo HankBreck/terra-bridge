@@ -1,9 +1,10 @@
 use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Binary, from_binary, Addr};
 use cw0::maybe_addr;
+use cw_storage_plus::U64Key;
 
 use crate::{
     error::ContractError,
-    state::{ADMINS, OPERS, C_TO_S_MAP, BridgeRecord, history},
+    state::{ADMINS, OPERS, C_TO_S_MAP, BridgeRecord, history, next_history_pk},
 };
 
 pub fn try_update_super_user(
@@ -92,18 +93,12 @@ pub fn try_release_nft(
         .add_attribute("token_id", token_id))
 }
 
-// TODO:
-//  * Create the struct that contains:
-//      * SN destination addr (String)
-//      * OG sender
-
 pub fn try_receive_nft(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    sender: String, // Can this be &str?
-    token_id: String, // Can this be &str?
-    msg: Binary,
+    sender: String,
+    token_id: String,
 ) -> Result<Response, ContractError> {
     // Validate NFT sender
     let sender_addr = deps.api.addr_validate(&sender)?;
@@ -112,9 +107,6 @@ pub fn try_receive_nft(
     let sn_coll_addr = C_TO_S_MAP.may_load(deps.storage, info.sender.as_str())?
         .ok_or_else(|| ContractError::UnauthorizedCollection { })?;
 
-    // Parse TX metadata from the binary message using from_binary()
-    let destination: Addr = from_binary(&msg)?;
-
     // Save history
     let record = BridgeRecord {
         is_bridged: false,
@@ -122,18 +114,19 @@ pub fn try_receive_nft(
         is_released: false,
         source_address: sender_addr,
         source_collection: info.sender,
-        destination_collection: destination,
+        destination_collection: sn_coll_addr,
         block_height: env.block.height,
         block_time: env.block.time.seconds(),
     };
 
-    // history()
-    //     .update(store, key, action)
-
-    // Emit attributes:
-    // * Cosmos address
-    // * Secret address
-    // * History ID
+    // Load next primary key and save history to storage
+    let hist_id = next_history_pk(deps.storage)?;
+    history().save(deps.storage, U64Key::new(hist_id), &record)?;
     
-    Ok(Response::default())
+    Ok(Response::default()
+        .add_attribute("action", "receive_nft")
+        .add_attribute("sender", record.source_address)
+        .add_attribute("cosmos_collection_addr", record.source_collection)
+        .add_attribute("secret_collection_addr", record.destination_collection)
+        .add_attribute("history_id", hist_id.to_string()))
 }
