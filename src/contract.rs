@@ -66,6 +66,3 @@ pub fn migrate(
 
     Ok(Response::default())
 }
-
-// add entrypoint for CW721Receive
-// source: https://github.com/CosmWasm/cw-nfts/blob/main/contracts/cw721-base/src/execute.rs#L154
