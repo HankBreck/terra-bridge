@@ -103,7 +103,7 @@ pub fn try_receive_nft(
     // Validate NFT sender
     let sender_addr = deps.api.addr_validate(&sender)?;
 
-    // info.sender is the Cosmos contract that sent the NFT
+    // Check whitelist to see if the collection is mapped to Secret
     let sn_coll_addr = C_TO_S_MAP
         .may_load(deps.storage, info.sender.as_str())?
         .ok_or_else(|| ContractError::UnauthorizedCollection {})?;
