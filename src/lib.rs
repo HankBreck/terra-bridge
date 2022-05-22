@@ -5,5 +5,5 @@ pub mod msg;
 pub mod query;
 pub mod state;
 
-// Can we remove this from deployment?
+#[cfg(test)]
 pub mod test;

@@ -1,22 +1,22 @@
-use cosmwasm_std::{Addr, to_binary, Binary, Deps, Env, CanonicalAddr, StdResult, Order};
+use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Env, Order, StdResult};
 use cw0::maybe_addr;
 use cw_storage_plus::Bound;
 
-use crate::{msg::{AdminsResponse, OperatorsResponse}, state::{OPERS, ADMINS, BridgeRecord, DEFAULT_LIMIT, MAX_LIMIT, history}, error::ContractError};
-
+use crate::{
+    error::ContractError,
+    msg::{AdminsResponse, OperatorsResponse},
+    state::{history, BridgeRecord, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS},
+};
 
 /*
- * 
+ *
  * Query Functions
- * 
+ *
  */
 
 /// Fetches all admins
 /// ADD REAL DOCS
-pub fn query_admins(
-    deps: Deps,
-    env: Env,
-) -> StdResult<Binary> {
+pub fn query_admins(deps: Deps, env: Env) -> StdResult<Binary> {
     let admins: Vec<CanonicalAddr> = ADMINS.load(deps.storage)?;
     let resp = AdminsResponse {
         admins: admins
@@ -29,10 +29,7 @@ pub fn query_admins(
 
 /// Fetches all operators
 /// ADD REAL DOCS
-pub fn query_operators(
-    deps: Deps,
-    env: Env,
-) -> StdResult<Binary> {
+pub fn query_operators(deps: Deps, env: Env) -> StdResult<Binary> {
     let operators: Vec<CanonicalAddr> = OPERS.load(deps.storage)?;
     let resp = OperatorsResponse {
         operators: operators

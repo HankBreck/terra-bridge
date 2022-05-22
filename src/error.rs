@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Addr};
+use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,8 +10,8 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error("Unauthorized collection")]
-    UnauthorizedCollection { },
+    UnauthorizedCollection {},
 
     #[error("Invalid address: {address:?}")]
-    InvalidAddress { address: String }
+    InvalidAddress { address: String },
 }

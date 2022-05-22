@@ -1,9 +1,10 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, entry_point, Deps, Binary};
+use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
 use crate::{
     error::ContractError,
     execute::{try_receive_nft, try_release_nft, try_update_super_user},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg}, query::{query_operators, query_admins, query_history},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    query::{query_admins, query_history, query_operators},
 };
 
 #[entry_point]
@@ -40,29 +41,27 @@ pub fn execute(
             token_id,
         } => try_release_nft(deps, env, info, recipient, contract_address, token_id),
 
-        ExecuteMsg::ReceiveNft(receive_msg) => try_receive_nft(deps, env, info, receive_msg.sender, receive_msg.token_id),
+        ExecuteMsg::ReceiveNft(receive_msg) => {
+            try_receive_nft(deps, env, info, receive_msg.sender, receive_msg.token_id)
+        }
     }
 }
 
 #[entry_point]
-pub fn query(
-    deps: Deps,
-    env: Env,
-    msg: QueryMsg,
-) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Admins { } => query_admins(deps, env),
-        QueryMsg::Operators { } => query_operators(deps, env),
-        QueryMsg::HistoryByToken { collection_address, token_id, start_after, limit } => query_history(deps, collection_address, token_id, start_after, limit),
+        QueryMsg::Admins {} => query_admins(deps, env),
+        QueryMsg::Operators {} => query_operators(deps, env),
+        QueryMsg::HistoryByToken {
+            collection_address,
+            token_id,
+            start_after,
+            limit,
+        } => query_history(deps, collection_address, token_id, start_after, limit),
     }
 }
 
 #[entry_point]
-pub fn migrate(
-    deps: DepsMut,
-    env: Env,
-    msg: MigrateMsg,
-) -> StdResult<Response> {
-
+pub fn migrate(deps: DepsMut, env: Env, msg: MigrateMsg) -> StdResult<Response> {
     Ok(Response::default())
 }

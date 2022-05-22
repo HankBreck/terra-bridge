@@ -1,10 +1,12 @@
-use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Binary, from_binary, Addr};
+use cosmwasm_std::{
+    from_binary, Addr, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult,
+};
 use cw0::maybe_addr;
 use cw_storage_plus::U64Key;
 
 use crate::{
     error::ContractError,
-    state::{ADMINS, OPERS, C_TO_S_MAP, BridgeRecord, history, next_history_pk},
+    state::{history, next_history_pk, BridgeRecord, ADMINS, C_TO_S_MAP, OPERS},
 };
 
 pub fn try_update_super_user(
@@ -14,7 +16,6 @@ pub fn try_update_super_user(
     add_list: Option<Vec<String>>,
     remove_list: Option<Vec<String>>,
 ) -> Result<Response, ContractError> {
-
     // Local state variables
     let mut save_it = false;
 
@@ -63,11 +64,10 @@ pub fn try_update_super_user(
         }
     }
 
-    let action = format!("update_{}", if is_admin {"admins"} else {"operators"});
+    let action = format!("update_{}", if is_admin { "admins" } else { "operators" });
 
     // TODO: Add response attributes
-    Ok(Response::default()
-        .add_attribute("action", action))
+    Ok(Response::default().add_attribute("action", action))
 }
 
 pub fn try_release_nft(
@@ -104,8 +104,9 @@ pub fn try_receive_nft(
     let sender_addr = deps.api.addr_validate(&sender)?;
 
     // info.sender is the Cosmos contract that sent the NFT
-    let sn_coll_addr = C_TO_S_MAP.may_load(deps.storage, info.sender.as_str())?
-        .ok_or_else(|| ContractError::UnauthorizedCollection { })?;
+    let sn_coll_addr = C_TO_S_MAP
+        .may_load(deps.storage, info.sender.as_str())?
+        .ok_or_else(|| ContractError::UnauthorizedCollection {})?;
 
     // Save history
     let record = BridgeRecord {
@@ -122,7 +123,7 @@ pub fn try_receive_nft(
     // Load next primary key and save history to storage
     let hist_id = next_history_pk(deps.storage)?;
     history().save(deps.storage, U64Key::new(hist_id), &record)?;
-    
+
     Ok(Response::default()
         .add_attribute("action", "receive_nft")
         .add_attribute("sender", record.source_address)

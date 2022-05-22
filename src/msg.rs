@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::BridgeRecord;
 
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     /// Initial admin addresses
@@ -54,10 +53,10 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Lists the contract's admins
-    Admins { },
+    Admins {},
 
     /// Lists the contract's operators
-    Operators { },
+    Operators {},
 
     /// Lists the information for a given NFT
     HistoryByToken {
@@ -65,13 +64,13 @@ pub enum QueryMsg {
         collection_address: String,
         /// The token_id of the NFT
         token_id: String,
-        /// The last element from the previous query. 
+        /// The last element from the previous query.
         /// Used in pagination.
         start_after: Option<u64>,
         /// The maximum number of records to show.
         /// Used in pagination.
         limit: Option<u8>,
-    }
+    },
 }
 
 /// Shows the contract's admins
