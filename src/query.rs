@@ -16,7 +16,7 @@ use crate::{
 
 /// Fetches all admins
 /// ADD REAL DOCS
-pub fn query_admins(deps: Deps, env: Env) -> StdResult<Binary> {
+pub fn query_admins(deps: Deps) -> StdResult<Binary> {
     let admins: Vec<CanonicalAddr> = ADMINS.load(deps.storage)?;
     let resp = AdminsResponse {
         admins: admins
@@ -29,7 +29,7 @@ pub fn query_admins(deps: Deps, env: Env) -> StdResult<Binary> {
 
 /// Fetches all operators
 /// ADD REAL DOCS
-pub fn query_operators(deps: Deps, env: Env) -> StdResult<Binary> {
+pub fn query_operators(deps: Deps) -> StdResult<Binary> {
     let operators: Vec<CanonicalAddr> = OPERS.load(deps.storage)?;
     let resp = OperatorsResponse {
         operators: operators
