@@ -1,10 +1,13 @@
-use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr, CanonicalAddr};
+use cosmwasm_std::{
+    entry_point, Addr, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+};
 
 use crate::{
     error::ContractError,
     execute::{try_receive_nft, try_release_nft, try_update_super_user},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    query::{query_admins, query_history, query_operators}, state::{HISTORY_PK, ADMINS, OPERS},
+    query::{query_admins, query_history, query_operators},
+    state::{ADMINS, HISTORY_PK, OPERS},
 };
 
 // version info for migration info
@@ -22,7 +25,8 @@ pub fn instantiate(
 
     // Validate each admin address
     let mut includes_sender = false;
-    let mut admins_valid = msg.admins
+    let mut admins_valid = msg
+        .admins
         .iter()
         .map(|addr| {
             let addr_valid = deps.api.addr_canonicalize(addr)?;
@@ -32,18 +36,19 @@ pub fn instantiate(
             Ok(addr_valid)
         })
         .collect::<StdResult<Vec<CanonicalAddr>>>()?;
-    
+
     // Add sender to admins if not included
     if !includes_sender {
         admins_valid.push(sender_raw);
     }
 
     // Validate each operator adderss
-    let opers_valid = msg.operators
+    let opers_valid = msg
+        .operators
         .iter()
         .map(|addr| deps.api.addr_canonicalize(addr))
         .collect::<StdResult<Vec<CanonicalAddr>>>()?;
-    
+
     // Initialize the state
     HISTORY_PK.save(deps.storage, &0u64)?;
     ADMINS.save(deps.storage, &admins_valid)?;
