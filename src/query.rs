@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Order, StdResul
 use cw_storage_plus::Bound;
 
 use crate::{
-    msg::{AdminsResponse, OperatorsResponse, HistoryByTokenResponse},
+    msg::{AdminsResponse, HistoryByTokenResponse, OperatorsResponse},
     state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS},
 };
 

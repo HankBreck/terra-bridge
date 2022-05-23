@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult,
-};
+use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_storage_plus::U64Key;
 
 use crate::{
