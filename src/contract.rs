@@ -1,6 +1,7 @@
 use cosmwasm_std::{
     entry_point, Addr, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
+use cw2::set_contract_version;
 
 use crate::{
     error::ContractError,
@@ -12,7 +13,7 @@ use crate::{
 
 // version info for migration info
 const CONTRACT_NAME: &str = "terra-bridge";
-const CONTRAC_VERSION: &str = env!("CARGO");
+const CONTRACT_VERSION: &str = env!("CARGO");
 
 #[entry_point]
 pub fn instantiate(
@@ -53,6 +54,7 @@ pub fn instantiate(
     HISTORY_PK.save(deps.storage, &0u64)?;
     ADMINS.save(deps.storage, &admins_valid)?;
     OPERS.save(deps.storage, &opers_valid)?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default()
         .add_attribute("action", "instantiate")
