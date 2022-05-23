@@ -16,7 +16,11 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    // Admin messages
+
+    /*
+     * Admin messages
+     */
+
     /// Update the contract's admins
     UpdateAdmins {
         /// The addresses to add
@@ -32,6 +36,8 @@ pub enum ExecuteMsg {
         /// The addresses to remove
         remove: Option<Vec<String>>,
     },
+
+
 
     /// Transfer ownership of NFT to the new owner
     /// * contract_address, token_id is the key for our NFTs
