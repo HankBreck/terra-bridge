@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    entry_point, Addr, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    entry_point, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
 use cw2::set_contract_version;
 
@@ -18,7 +18,7 @@ const CONTRACT_VERSION: &str = env!("CARGO");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {

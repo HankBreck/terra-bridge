@@ -103,7 +103,7 @@ pub fn try_receive_nft(
     // Check whitelist to see if the collection is mapped to Secret
     let sn_coll_addr = C_TO_S_MAP
         .may_load(deps.storage, info.sender.as_str())?
-        .ok_or_else(|| ContractError::UnauthorizedCollection {})?;
+        .ok_or(ContractError::UnauthorizedCollection { })?;
 
     // Save history
     let record = BridgeRecord {

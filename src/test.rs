@@ -3,7 +3,7 @@ mod tests {
     use cosmwasm_std::{
         from_binary,
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Api, CanonicalAddr, DepsMut, Response, StdResult,
+        Addr, Api, DepsMut, Response,
     };
 
     use crate::{

@@ -57,7 +57,7 @@ pub fn query_history(
         .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         // Separate the records from the indexes
-        .map(|item| item.and_then(|vals| Ok(vals.1)))
+        .map(|item| item.map(|vals| vals.1))
         .collect::<StdResult<Vec<_>>>()?;
 
     to_binary(&HistoryByTokenResponse { history })
