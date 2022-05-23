@@ -1,11 +1,9 @@
-use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Env, Order, StdResult};
-use cw0::maybe_addr;
+use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Order, StdResult};
 use cw_storage_plus::Bound;
 
 use crate::{
-    error::ContractError,
-    msg::{AdminsResponse, OperatorsResponse},
-    state::{history, BridgeRecord, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS},
+    msg::{AdminsResponse, OperatorsResponse, HistoryByTokenResponse},
+    state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS},
 };
 
 /*
@@ -18,26 +16,24 @@ use crate::{
 /// ADD REAL DOCS
 pub fn query_admins(deps: Deps) -> StdResult<Binary> {
     let admins: Vec<CanonicalAddr> = ADMINS.load(deps.storage)?;
-    let resp = AdminsResponse {
+    to_binary(&AdminsResponse {
         admins: admins
             .iter()
             .map(|addr| deps.api.addr_humanize(addr))
             .collect::<StdResult<Vec<Addr>>>()?,
-    };
-    to_binary(&resp)
+    })
 }
 
 /// Fetches all operators
 /// ADD REAL DOCS
 pub fn query_operators(deps: Deps) -> StdResult<Binary> {
     let operators: Vec<CanonicalAddr> = OPERS.load(deps.storage)?;
-    let resp = OperatorsResponse {
+    to_binary(&OperatorsResponse {
         operators: operators
             .iter()
             .map(|addr| deps.api.addr_humanize(addr))
             .collect::<StdResult<Vec<Addr>>>()?,
-    };
-    to_binary(&resp)
+    })
 }
 
 /// Fetches the history for a single token
@@ -64,5 +60,5 @@ pub fn query_history(
         .map(|item| item.and_then(|vals| Ok(vals.1)))
         .collect::<StdResult<Vec<_>>>()?;
 
-    to_binary(&history)
+    to_binary(&HistoryByTokenResponse { history })
 }

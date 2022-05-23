@@ -1,7 +1,6 @@
 use cosmwasm_std::{
-    from_binary, Addr, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult,
+    CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult,
 };
-use cw0::maybe_addr;
 use cw_storage_plus::U64Key;
 
 use crate::{

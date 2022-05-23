@@ -91,7 +91,7 @@ pub struct OperatorsResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct HistoryByTokenResponse {
     /// Information about an NFT from a given collection
-    pub history: BridgeRecord,
+    pub history: Vec<BridgeRecord>,
 }
 
 /// TODO: Test migration
