@@ -3,10 +3,10 @@ use cw_storage_plus::U64Key;
 
 use crate::{
     error::ContractError,
-    state::{history, next_history_pk, BridgeRecord, ADMINS, C_TO_S_MAP, OPERS},
+    state::{history, next_history_pk, BridgeRecord, ADMINS, COLLECTION_MAP, OPERS}, msg::CollectionMapping,
 };
 
-pub fn try_update_super_user(
+pub fn try_update_super_users(
     deps: DepsMut,
     info: MessageInfo,
     is_admin: bool,
@@ -31,9 +31,9 @@ pub fn try_update_super_user(
     };
 
     // Add all add_list addresses from storage
-    for addr in add_list.unwrap_or_default().iter() {
+    for addr in add_list.unwrap_or_default() {
         // Validate address and convert to raw address
-        let addr_raw = deps.api.addr_canonicalize(addr)?;
+        let addr_raw = deps.api.addr_canonicalize(&addr)?;
         if !source_list.contains(&addr_raw) {
             source_list.push(addr_raw);
             save_it = true;
@@ -65,6 +65,49 @@ pub fn try_update_super_user(
 
     // TODO: Add response attributes
     Ok(Response::default().add_attribute("action", action))
+}
+
+/// Updates the collection mappings in storage.
+/// All items in `rem_list` are removed before adding items from `add_list`.
+/// * Sender must be an admin
+/// 
+/// # Arguments
+/// 
+/// * `deps` - a mutable reference to Extern containing all the contract's external dependencies
+/// * `info` - additional information about the contract's caller
+/// * `add_list` - a list of [CollectionMapping]s to be stored
+/// * `rem_list` - a list of Terra contract addresses to be cleared from storage
+pub fn try_update_collection_mappings(
+    deps: DepsMut,
+    info: MessageInfo,
+    rem_list: Option<Vec<String>>,
+    add_list: Option<Vec<CollectionMapping>>,
+) -> Result<Response, ContractError> {
+    // Verify sender is an admin
+    let admins = ADMINS.load(deps.storage)?;
+    let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
+    if !admins.contains(&sender_raw) {
+        return Err(ContractError::Unauthorized { });
+    }
+
+    // Remove items first so we can perform "updates" on keys
+    for addr in rem_list.unwrap_or_default() {
+        let source = deps.api.addr_validate(&addr)?;
+        COLLECTION_MAP.remove(deps.storage, source);
+    }
+
+    // Create new mapping in storage for each CollectionMapping
+    for pair in add_list.unwrap_or_default() {
+        let source = deps.api.addr_validate(&pair.source)?;
+        let dest = deps.api.addr_validate(&pair.destination)?;
+        COLLECTION_MAP.update(deps.storage, source.clone(), |existing| match existing {
+            // Do not allow key overwrites
+            Some(_) => Err(ContractError::MappingExists { source_addr: source.into_string() }),
+            None => Ok(dest),
+        })?;
+    }
+
+    Ok(Response::default().add_attribute("action", "update_collection_mappings"))
 }
 
 pub fn try_release_nft(
@@ -101,8 +144,8 @@ pub fn try_receive_nft(
     let sender_addr = deps.api.addr_validate(&sender)?;
 
     // Check whitelist to see if the collection is mapped to Secret
-    let sn_coll_addr = C_TO_S_MAP
-        .may_load(deps.storage, info.sender.as_str())?
+    let sn_coll_addr = COLLECTION_MAP
+        .may_load(deps.storage, info.sender.clone())?
         .ok_or(ContractError::UnauthorizedCollection { })?;
 
     // Save history

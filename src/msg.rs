@@ -37,7 +37,15 @@ pub enum ExecuteMsg {
         remove: Option<Vec<String>>,
     },
 
-
+    /// Update the collection mappings used for whitelist.
+    /// * to update a collections mapping you can remove the old mapping and add a new mapping in the same message
+    UpdateCollectionMapping {
+        /// List of source -> destination collection mappings that will be added to the contract's state
+        add: Option<Vec<CollectionMapping>>,
+        /// List of source addresses to remove from the bridge
+        /// * nb: this should rarely be used. Removing an collection that is already bridged could be seen as malicious behavior.
+        remove: Option<Vec<String>>,
+    },
 
     /// Transfer ownership of NFT to the new owner
     /// * contract_address, token_id is the key for our NFTs
@@ -64,6 +72,9 @@ pub enum QueryMsg {
     /// Lists the contract's operators
     Operators {},
 
+    /// Returns the Secret network address associated with `source_contract` if a mapping exists. 
+    CollectionMappings { source_contracts: Vec<String> },
+
     /// Lists the information for a given NFT
     HistoryByToken {
         /// The address of the collection you wish to view
@@ -79,6 +90,26 @@ pub enum QueryMsg {
     },
 }
 
+/*
+ *
+ * Util Structs used in messages
+ * 
+ */
+
+/*
+ * Execute Utils
+ */
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct CollectionMapping {
+    pub source: String,
+    pub destination: String,
+}
+
+/*
+ * Query Utils
+ */
+
 /// Shows the contract's admins
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct AdminsResponse {
@@ -91,6 +122,11 @@ pub struct AdminsResponse {
 pub struct OperatorsResponse {
     /// A list of all contract operators
     pub operators: Vec<Addr>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct CollectionMappingResponse {
+    pub destinations: Vec<Addr>,
 }
 
 /// Shows all token_ids for a given collection

@@ -5,9 +5,9 @@ use cw2::set_contract_version;
 
 use crate::{
     error::ContractError,
-    execute::{try_receive_nft, try_release_nft, try_update_super_user},
+    execute::{try_receive_nft, try_release_nft, try_update_super_users, try_update_collection_mappings},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
-    query::{query_admins, query_history, query_operators},
+    query::{query_admins, query_history, query_operators, query_collection_mappings},
     state::{ADMINS, HISTORY_PK, OPERS},
 };
 
@@ -69,19 +69,28 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+
+        // Sender must be admin
+
         ExecuteMsg::UpdateAdmins { add, remove } => {
-            try_update_super_user(deps, info, true, add, remove)
+            try_update_super_users(deps, info, true, add, remove)
         }
 
         ExecuteMsg::UpdateOperators { add, remove } => {
-            try_update_super_user(deps, info, false, add, remove)
+            try_update_super_users(deps, info, false, add, remove)
         }
+
+        ExecuteMsg::UpdateCollectionMapping { add, remove } => try_update_collection_mappings(deps, info, remove, add),
+
+        // Sender must be admin or operator
 
         ExecuteMsg::ReleaseNft {
             recipient,
             contract_address,
             token_id,
         } => try_release_nft(deps, env, info, recipient, contract_address, token_id),
+
+        // Sender must be a cw721 contract
 
         ExecuteMsg::ReceiveNft(receive_msg) => {
             try_receive_nft(deps, env, info, receive_msg.sender, receive_msg.token_id)
@@ -90,10 +99,11 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Admins {} => query_admins(deps),
         QueryMsg::Operators {} => query_operators(deps),
+        QueryMsg::CollectionMappings { source_contracts } => query_collection_mappings(deps, source_contracts),
         QueryMsg::HistoryByToken {
             collection_address,
             token_id,

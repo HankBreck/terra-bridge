@@ -14,4 +14,10 @@ pub enum ContractError {
 
     #[error("Invalid address: {address:?}")]
     InvalidAddress { address: String },
+
+    #[error("Collection mapping already exists for Terra address {source_addr:?}")]
+    MappingExists { source_addr: String },
+
+    #[error("Collection mapping not found for Terra address {source_addr:?}")]
+    MappingNotFound { source_addr: String }
 }

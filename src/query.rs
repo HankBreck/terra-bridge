@@ -2,8 +2,8 @@ use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Order, StdResul
 use cw_storage_plus::Bound;
 
 use crate::{
-    msg::{AdminsResponse, HistoryByTokenResponse, OperatorsResponse},
-    state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS},
+    msg::{AdminsResponse, HistoryByTokenResponse, OperatorsResponse, CollectionMappingResponse},
+    state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, COLLECTION_MAP}, error::ContractError,
 };
 
 /*
@@ -14,26 +14,45 @@ use crate::{
 
 /// Fetches all admins
 /// ADD REAL DOCS
-pub fn query_admins(deps: Deps) -> StdResult<Binary> {
+pub fn query_admins(deps: Deps) -> Result<Binary, ContractError> {
     let admins: Vec<CanonicalAddr> = ADMINS.load(deps.storage)?;
-    to_binary(&AdminsResponse {
+    let resp = AdminsResponse {
         admins: admins
             .iter()
             .map(|addr| deps.api.addr_humanize(addr))
             .collect::<StdResult<Vec<Addr>>>()?,
-    })
+    };
+    Ok(to_binary(&resp)?)
 }
 
 /// Fetches all operators
 /// ADD REAL DOCS
-pub fn query_operators(deps: Deps) -> StdResult<Binary> {
+pub fn query_operators(deps: Deps) -> Result<Binary, ContractError> {
     let operators: Vec<CanonicalAddr> = OPERS.load(deps.storage)?;
-    to_binary(&OperatorsResponse {
+    let resp = OperatorsResponse {
         operators: operators
             .iter()
             .map(|addr| deps.api.addr_humanize(addr))
             .collect::<StdResult<Vec<Addr>>>()?,
-    })
+    };
+    Ok(to_binary(&resp)?)
+}
+
+pub fn query_collection_mappings(
+    deps: Deps,
+    source_contracts: Vec<String>,
+) -> Result<Binary, ContractError> {
+    let destinations = source_contracts
+        .iter()
+        .map(|addr| {
+            let addr = deps.api.addr_validate(addr)?;
+            let destination = COLLECTION_MAP.may_load(deps.storage, addr.clone())?
+                .ok_or(ContractError::MappingNotFound { source_addr: addr.into_string() })?;
+            Ok(destination)
+        })
+        .collect::<Result<Vec<Addr>, ContractError>>()?;
+
+    Ok(to_binary(&CollectionMappingResponse { destinations })?)
 }
 
 /// Fetches the history for a single token
@@ -44,7 +63,7 @@ pub fn query_history(
     token_id: String,
     start_after: Option<u64>,
     limit: Option<u8>,
-) -> StdResult<Binary> {
+) -> Result<Binary, ContractError> {
     let addr = deps.api.addr_validate(&collection_address)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = start_after.map(|s| Bound::Exclusive(s.to_be_bytes().into()));
@@ -60,5 +79,5 @@ pub fn query_history(
         .map(|item| item.map(|vals| vals.1))
         .collect::<StdResult<Vec<_>>>()?;
 
-    to_binary(&HistoryByTokenResponse { history })
+    Ok(to_binary(&HistoryByTokenResponse { history })?)
 }

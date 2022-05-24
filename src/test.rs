@@ -9,9 +9,9 @@ mod tests {
     use crate::{
         contract::instantiate,
         error::ContractError,
-        execute::try_update_super_user,
-        msg::{AdminsResponse, InstantiateMsg, OperatorsResponse},
-        query::{query_admins, query_operators},
+        execute::{try_update_super_users, try_update_collection_mappings},
+        msg::{AdminsResponse, InstantiateMsg, OperatorsResponse, CollectionMapping, CollectionMappingResponse},
+        query::{query_admins, query_operators, query_collection_mappings},
     };
 
     // Static variables for testing
@@ -90,18 +90,16 @@ mod tests {
         // Add update for pause
     }
 
-    // add test for instantiation with info.sender not in admins
-    // check admins from state includes info.sender
     #[test]
     fn omit_sender_instantiation() {
         // Instantiate including creator in admins
         let mut deps = mock_dependencies(&[]);
-        let mut admins = vec!["champ".to_string(), "bobcat".to_string()];
-        let opers = vec!["tommy".to_string(), "titan".to_string()];
+        let mut admins = get_admins_no_creator();
+        let opers = get_opers();
         let result = do_instantiate(deps.as_mut(), admins.clone(), opers.clone());
 
         // we can just call .unwrap() to assert successful instantiation
-        let _ = result.unwrap();
+        result.unwrap();
 
         admins.push(CREATOR.to_string());
 
@@ -138,7 +136,7 @@ mod tests {
         let admins_rem = vec!["champ".to_string()];
 
         // Ensure TX succeeds
-        let _ = try_update_super_user(
+        let _ = try_update_super_users(
             deps.as_mut(),
             info_success,
             true,
@@ -166,7 +164,7 @@ mod tests {
         // Try to reset admins back to initial_admins
         // Flipping admins_rem & admins_add from the previous test would reset the the contract's admin state
         // back to the initial value of initial_admins
-        let err = try_update_super_user(
+        let err = try_update_super_users(
             deps.as_mut(),
             info_fail,
             true,
@@ -199,7 +197,7 @@ mod tests {
         let opers_rem = vec!["tommy".to_string()];
 
         // Ensure TX succeeds
-        let _ = try_update_super_user(
+        let _ = try_update_super_users(
             deps.as_mut(),
             info_success,
             false,
@@ -227,7 +225,7 @@ mod tests {
         // Try to reset operators back to initial_opers
         // Flipping opers_rem & opers_add from the previous test would reset the the contract's operator state
         // back to the initial value of initial_opers
-        let err = try_update_super_user(
+        let err = try_update_super_users(
             deps.as_mut(),
             info_fail,
             false,
@@ -244,6 +242,86 @@ mod tests {
         print!("Opers: {:?}", opers);
         print!("Response: {:?}", fail_res);
         assert_eq!(opers, fail_res);
+    }
+
+    #[test]
+    fn update_collection_mappings() {
+        // Instantiate contract
+        let mut deps = mock_dependencies(&[]);
+        let initial_admins = get_admins();
+        let initial_opers = get_opers();
+        do_instantiate(deps.as_mut(), initial_admins.clone(), initial_opers).unwrap();
+
+        // Verify mappings count is 0
+            // TODO: Add ContractInfo to hold this data
+        
+        /*
+         * Non-admin user cannot update collection mappings 
+        */
+
+        let info_fail = mock_info("tommy", &[]);
+        let add_list = vec![
+            CollectionMapping { source: "terra contract 1".to_string(), destination: "secret contract 1".to_string() },
+            CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2".to_string() },
+        ];
+        let err = try_update_collection_mappings(deps.as_mut(), info_fail, None, Some(add_list.clone())).unwrap_err();
+        assert_eq!(err.to_string(), "Unauthorized");
+
+
+        /*
+         * Admin can add items to the collection mappings
+        */
+
+        let info_success = mock_info(&CREATOR, &[]);
+        try_update_collection_mappings(deps.as_mut(), info_success.clone(), None, Some(add_list.clone())).unwrap();
+        
+        let sources = vec!["terra contract 1".into(), "terra contract 2".into()];
+        let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
+        let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
+        assert_eq!(destinations.len(), 2);
+        
+        let res_success = vec![
+            deps.api.addr_validate("secret contract 1").unwrap(),
+            deps.api.addr_validate("secret contract 2").unwrap(),
+        ];
+        assert_eq!(destinations, res_success);
+
+        /*
+         * Admin can remove items from the collection mappings
+         */
+        let rem_list = vec!["terra contract 1".to_string()];
+        try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), None).unwrap();
+
+        let sources = vec!["terra contract 2".to_string()];
+        let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
+        let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
+        assert_eq!(destinations.len(), 1);
+        
+        let res_success = vec![
+            deps.api.addr_validate("secret contract 2").unwrap(),
+        ];
+        assert_eq!(destinations, res_success);
+
+        /*
+         * Removing and adding mappings for the same source collection removes the existing mapping
+         * and replaces it with the new mapping
+         */
+        
+        let rem_list = vec!["terra contract 2".to_string()];
+        let add_list = vec![
+            CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2.0".to_string() },
+        ];
+        try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), Some(add_list)).unwrap();
+
+        let sources = vec!["terra contract 2".to_string()];
+        let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
+        let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
+        assert_eq!(destinations.len(), 1);
+        
+        let res_success = vec![
+            deps.api.addr_validate("secret contract 2.0").unwrap(),
+        ];
+        assert_eq!(destinations, res_success);
     }
 
     // add test for cw721receive working as intended
