@@ -9,9 +9,9 @@ mod tests {
     use crate::{
         contract::instantiate,
         error::ContractError,
-        execute::{try_update_super_users, try_update_collection_mappings},
-        msg::{AdminsResponse, InstantiateMsg, OperatorsResponse, CollectionMapping, CollectionMappingResponse},
-        query::{query_admins, query_operators, query_collection_mappings},
+        execute::{try_update_super_users, try_update_collection_mappings, try_receive_nft},
+        msg::{AdminsResponse, InstantiateMsg, OperatorsResponse, CollectionMapping, CollectionMappingResponse, HistoryResponse, BridgeRecordResponse},
+        query::{query_admins, query_operators, query_collection_mappings, query_history}, state::BridgeRecord,
     };
 
     // Static variables for testing
@@ -239,8 +239,6 @@ mod tests {
         let opers: OperatorsResponse =
             from_binary(&query_operators(deps.as_ref()).unwrap()).unwrap();
         let fail_res = success_res;
-        print!("Opers: {:?}", opers);
-        print!("Response: {:?}", fail_res);
         assert_eq!(opers, fail_res);
     }
 
@@ -257,7 +255,7 @@ mod tests {
         
         /*
          * Non-admin user cannot update collection mappings 
-        */
+         */
 
         let info_fail = mock_info("tommy", &[]);
         let add_list = vec![
@@ -270,7 +268,7 @@ mod tests {
 
         /*
          * Admin can add items to the collection mappings
-        */
+         */
 
         let info_success = mock_info(&CREATOR, &[]);
         try_update_collection_mappings(deps.as_mut(), info_success.clone(), None, Some(add_list.clone())).unwrap();
@@ -278,7 +276,6 @@ mod tests {
         let sources = vec!["terra contract 1".into(), "terra contract 2".into()];
         let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
         let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
-        assert_eq!(destinations.len(), 2);
         
         let res_success = vec![
             deps.api.addr_validate("secret contract 1").unwrap(),
@@ -289,14 +286,13 @@ mod tests {
         /*
          * Admin can remove items from the collection mappings
          */
+
         let rem_list = vec!["terra contract 1".to_string()];
         try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), None).unwrap();
 
         let sources = vec!["terra contract 2".to_string()];
         let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
         let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
-        assert_eq!(destinations.len(), 1);
-        
         let res_success = vec![
             deps.api.addr_validate("secret contract 2").unwrap(),
         ];
@@ -324,6 +320,60 @@ mod tests {
         assert_eq!(destinations, res_success);
     }
 
-    // add test for cw721receive working as intended
+    #[test]
+    fn receive_nft() {
+        // Instantiate contract
+        let mut deps = mock_dependencies(&[]);
+        let info = mock_info(CREATOR, &[]);
+        let env = mock_env();
+        let initial_admins = get_admins();
+        let initial_opers = get_opers();
+        do_instantiate(deps.as_mut(), initial_admins.clone(), initial_opers).unwrap();
+
+        /*
+         * Message fails if the terra contract is not mapped to a secret contract
+         */
+
+        let terra_coll_addr = "terra contract";
+        let info_contract = mock_info(terra_coll_addr, &[]);
+        let sender = "terra wallet".to_string();
+        let token_id = "0".to_string();
+        let err = try_receive_nft(deps.as_mut(), env.clone(), info_contract.clone(), sender.clone(), token_id.clone()).unwrap_err();
+        assert_eq!(err.to_string(), "Unauthorized collection");
+
+        /*
+         * Receives the NFT and saves a record of the transaction
+         */
+
+        // Add collection mapping for sender
+        let add_list = vec![
+            CollectionMapping { source: terra_coll_addr.into(), destination: "secret contract".into() }
+        ];
+        try_update_collection_mappings(deps.as_mut(), info.clone(), None, Some(add_list.clone())).unwrap();
+
+        // Send NFT to the contract
+        try_receive_nft(deps.as_mut(), env.clone(), info_contract, sender, token_id.clone()).unwrap();
+        let response: HistoryResponse = from_binary(
+            &query_history(deps.as_ref(), terra_coll_addr.into(), token_id.clone(), None, None).unwrap()
+        ).unwrap();
+
+        // Verify success
+        let res_success = HistoryResponse {
+            history: vec![ BridgeRecordResponse {
+                is_bridged: false,
+                is_released: false,
+                token_id: token_id,
+                source_address: "terra wallet".into(),
+                source_collection: terra_coll_addr.into(),
+                destination_collection: "secret contract".into(),
+                block_height: env.block.height,
+                block_time: env.block.time.seconds(),
+            }]
+        };
+        assert_eq!(response, res_success);
+
+
+    }
+
     // add test for cw721receive failing if the collection is not mapped
 }

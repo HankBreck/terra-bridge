@@ -2,8 +2,8 @@ use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Order, StdResul
 use cw_storage_plus::Bound;
 
 use crate::{
-    msg::{AdminsResponse, HistoryByTokenResponse, OperatorsResponse, CollectionMappingResponse},
-    state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, COLLECTION_MAP}, error::ContractError,
+    msg::{AdminsResponse, HistoryResponse, OperatorsResponse, CollectionMappingResponse, BridgeRecordResponse},
+    state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, COLLECTION_MAP, BridgeRecord}, error::ContractError,
 };
 
 /*
@@ -76,8 +76,8 @@ pub fn query_history(
         .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         // Separate the records from the indexes
-        .map(|item| item.map(|vals| vals.1))
-        .collect::<StdResult<Vec<_>>>()?;
+        .map(|item| item.map(|vals| vals.1.into()))
+        .collect::<StdResult<Vec<BridgeRecordResponse>>>()?;
 
-    Ok(to_binary(&HistoryByTokenResponse { history })?)
+    Ok(to_binary(&HistoryResponse { history })?)
 }

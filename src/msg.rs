@@ -110,6 +110,12 @@ pub struct CollectionMapping {
  * Query Utils
  */
 
+/// Contract configuration
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct ContractInfoResponse {
+
+}
+
 /// Shows the contract's admins
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct AdminsResponse {
@@ -129,12 +135,48 @@ pub struct CollectionMappingResponse {
     pub destinations: Vec<Addr>,
 }
 
-/// Shows all token_ids for a given collection
+/// Shows all bridge record for a specific token
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct HistoryByTokenResponse {
+pub struct HistoryResponse {
     /// Information about an NFT from a given collection
-    pub history: Vec<BridgeRecord>,
+    pub history: Vec<BridgeRecordResponse>,
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct BridgeRecordResponse {
+    /// true if the token has been successfully bridged to SN
+    pub is_bridged: bool,
+    /// true if the token has been released from the bridge
+    pub is_released: bool,
+    /// id of bridged token
+    pub token_id: String,
+    /// the Terra address that initiated the SendMsg request
+    pub source_address: String,
+    /// the address of the Terra collection
+    pub source_collection: String,
+    /// the address of the SN collection
+    pub destination_collection: String,
+    /// the Terra block of the tx
+    pub block_height: u64,
+    /// the time (in seconds since 01/01/1970) of tx
+    pub block_time: u64,
+}
+
+impl From<BridgeRecord> for BridgeRecordResponse {
+    fn from(record: BridgeRecord) -> Self {
+        Self { 
+            is_bridged: record.is_bridged,
+            is_released: record.is_released,
+            token_id: record.token_id,
+            source_address: record.source_address.into_string(),
+            source_collection: record.source_collection.into_string(),
+            destination_collection: record.destination_collection.into_string(),
+            block_height: record.block_height,
+            block_time: record.block_time,
+        }
+    }
+}
+
 
 /// TODO: Test migration
 pub struct MigrateMsg {

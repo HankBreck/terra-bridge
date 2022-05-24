@@ -3,7 +3,7 @@ use cw_storage_plus::U64Key;
 
 use crate::{
     error::ContractError,
-    state::{history, next_history_pk, BridgeRecord, ADMINS, COLLECTION_MAP, OPERS}, msg::CollectionMapping,
+    state::{next_history_pk, BridgeRecord, ADMINS, COLLECTION_MAP, OPERS, history}, msg::CollectionMapping,
 };
 
 pub fn try_update_super_users(
@@ -90,7 +90,7 @@ pub fn try_update_collection_mappings(
         return Err(ContractError::Unauthorized { });
     }
 
-    // Remove items first so we can perform "updates" on keys
+    // Remove items first so we can perform safely update a key's mapping in one message
     for addr in rem_list.unwrap_or_default() {
         let source = deps.api.addr_validate(&addr)?;
         COLLECTION_MAP.remove(deps.storage, source);
@@ -132,6 +132,7 @@ pub fn try_release_nft(
         .add_attribute("contract_address", contract_address)
         .add_attribute("token_id", token_id))
 }
+
 
 pub fn try_receive_nft(
     deps: DepsMut,
