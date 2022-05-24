@@ -8,7 +8,7 @@ use crate::{
     execute::{try_receive_nft, try_release_nft, try_update_super_users, try_update_collection_mappings},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::{query_admins, query_history, query_operators, query_collection_mappings},
-    state::{ADMINS, HISTORY_PK, OPERS},
+    state::{ADMINS, OPERS},
 };
 
 // version info for migration info
@@ -51,7 +51,6 @@ pub fn instantiate(
         .collect::<StdResult<Vec<CanonicalAddr>>>()?;
 
     // Initialize the state
-    HISTORY_PK.save(deps.storage, &0u64)?;
     ADMINS.save(deps.storage, &admins_valid)?;
     OPERS.save(deps.storage, &opers_valid)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

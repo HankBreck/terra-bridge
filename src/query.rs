@@ -3,7 +3,7 @@ use cw_storage_plus::Bound;
 
 use crate::{
     msg::{AdminsResponse, HistoryResponse, OperatorsResponse, CollectionMappingResponse, BridgeRecordResponse},
-    state::{history, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, COLLECTION_MAP, BridgeRecord}, error::ContractError,
+    state::{HISTORY, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, COLLECTION_MAP}, error::ContractError,
 };
 
 /*
@@ -64,20 +64,20 @@ pub fn query_history(
     start_after: Option<u64>,
     limit: Option<u8>,
 ) -> Result<Binary, ContractError> {
-    let addr = deps.api.addr_validate(&collection_address)?;
+    let source_addr = deps.api.addr_validate(&collection_address)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = start_after.map(|s| Bound::Exclusive(s.to_be_bytes().into()));
 
     // Fetch history from storage
-    let history = history()
-        .idx
-        .coll_token_id
-        .prefix((addr, token_id))
+    let history = HISTORY
+        .prefix((source_addr, token_id))
         .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
-        // Separate the records from the indexes
-        .map(|item| item.map(|vals| vals.1.into()))
-        .collect::<StdResult<Vec<BridgeRecordResponse>>>()?;
-
+        // Separate the record from the key
+        .map(|pair| {
+            Ok(pair?.1.into())
+        })
+        .collect::<Result<Vec<BridgeRecordResponse>, ContractError>>()?;
+        
     Ok(to_binary(&HistoryResponse { history })?)
 }

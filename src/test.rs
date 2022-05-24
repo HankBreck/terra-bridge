@@ -353,9 +353,8 @@ mod tests {
 
         // Send NFT to the contract
         try_receive_nft(deps.as_mut(), env.clone(), info_contract, sender, token_id.clone()).unwrap();
-        let response: HistoryResponse = from_binary(
-            &query_history(deps.as_ref(), terra_coll_addr.into(), token_id.clone(), None, None).unwrap()
-        ).unwrap();
+        let response_bin = &query_history(deps.as_ref(), terra_coll_addr.into(), token_id.clone(), None, Some(1u8)).unwrap();
+        let response: HistoryResponse = from_binary(&response_bin).unwrap();
 
         // Verify success
         let res_success = HistoryResponse {

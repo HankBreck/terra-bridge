@@ -1,7 +1,13 @@
 use cosmwasm_std::{Addr, CanonicalAddr, StdResult, Storage};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, U64Key};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, U64Key, PrimaryKey, Prefixer};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+/*
+ *
+ * Type Definitions
+ * 
+ */
 
 /// Storage for the history of a tokens bridging activity
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -24,6 +30,9 @@ pub struct BridgeRecord {
     pub block_time: u64,
 }
 
+/// (contract_address, token_id, history_id)
+pub type HistoryPK = (Addr, String, U64Key);
+
 /*
  *
  * Contract State
@@ -32,13 +41,6 @@ pub struct BridgeRecord {
 
 pub const DEFAULT_LIMIT: u8 = 15;
 pub const MAX_LIMIT: u8 = 30;
-
-/*
- * Keys
- */
-
-/// Key for HISTORY_PK
-pub const HISTORY_PK_NAMESPACE: &str = "history_pk";
 
 /*
  * Storage 
@@ -50,36 +52,30 @@ pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
 /// Mapping of a Terra contract's address to a Secret Network contract's address
 pub const COLLECTION_MAP: Map<Addr, Addr> = Map::new("c_to_s");
-/// counter to track the primary key for the history IndexedMap
-pub const HISTORY_PK: Item<u64> = Item::new(HISTORY_PK_NAMESPACE);
+/// Mapping of a Terra contract and token id to the number of TX records for that pair
+pub const HISTORY_COUNT: Map<(Addr, String), u64> = Map::new("history_pk");
+/// Mapping of a Terra contract, token id, and TX record id to the BridgeRecord for that TX
+pub const HISTORY: Map<HistoryPK, BridgeRecord> = Map::new("history");
 
-
-pub struct BridgeIndexes<'a> {
-    pub coll_token_id: MultiIndex<'a, (Addr, String, U64Key), BridgeRecord>,
-}
-
-impl<'a> IndexList<BridgeRecord> for BridgeIndexes<'a> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<BridgeRecord>> + '_> {
-        let v: Vec<&dyn Index<BridgeRecord>> = vec![&self.coll_token_id];
-        Box::new(v.into_iter())
-    }
-}
-
-pub fn next_history_pk(store: &mut dyn Storage) -> StdResult<u64> {
-    let id: u64 = HISTORY_PK.load(store)? + 1;
-    HISTORY_PK.save(store, &id)?;
+pub fn next_history_pk(
+    store: &mut dyn Storage,
+    source_addr: Addr,
+    token_id: String,
+) -> StdResult<u64> {
+    let key_prefix = (source_addr, token_id);
+    let id: u64 = HISTORY_COUNT.load(store, key_prefix.clone()).unwrap_or(0u64) + 1;
+    HISTORY_COUNT.save(store, key_prefix, &id)?;
     Ok(id)
 }
 
-/// Mapping of history_id -> BridgeRecord
-/// * Indexed by (source_collection, token_id, history_id)
-pub fn history<'a>() -> IndexedMap<'a, U64Key, BridgeRecord, BridgeIndexes<'a>> {
-    let indexes = BridgeIndexes {
-        coll_token_id: MultiIndex::new(
-            |rec: &BridgeRecord, pk| (rec.source_address.clone(), rec.token_id.clone(), pk.into()),
-            HISTORY_PK_NAMESPACE,
-            "bridge__coll_token_id",
-        ),
-    };
-    IndexedMap::new(HISTORY_PK_NAMESPACE, indexes)
+pub fn save_history (
+    store: &mut dyn Storage,
+    source_addr: Addr,
+    token_id: String,
+    record: BridgeRecord,
+) -> StdResult<u64> {
+    let history_id: u64 = next_history_pk(store, source_addr.to_owned(), token_id.to_owned())?;
+    HISTORY.save(store, (source_addr, token_id, history_id.into()), &record)?;
+    // Return history_id to be used in wasm attributes
+    Ok(history_id)
 }

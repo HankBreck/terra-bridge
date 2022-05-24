@@ -1,9 +1,8 @@
 use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult};
-use cw_storage_plus::U64Key;
 
 use crate::{
     error::ContractError,
-    state::{next_history_pk, BridgeRecord, ADMINS, COLLECTION_MAP, OPERS, history}, msg::CollectionMapping,
+    state::{BridgeRecord, ADMINS, COLLECTION_MAP, OPERS, save_history}, msg::CollectionMapping,
 };
 
 pub fn try_update_super_users(
@@ -146,29 +145,30 @@ pub fn try_receive_nft(
 
     // Check whitelist to see if the collection is mapped to Secret
     let sn_coll_addr = COLLECTION_MAP
-        .may_load(deps.storage, info.sender.clone())?
+        .may_load(deps.storage, info.sender.to_owned())?
         .ok_or(ContractError::UnauthorizedCollection { })?;
 
     // Save history
     let record = BridgeRecord {
         is_bridged: false,
-        token_id: token_id,
+        token_id: token_id.to_owned(),
         is_released: false,
-        source_address: sender_addr,
-        source_collection: info.sender,
-        destination_collection: sn_coll_addr,
+        source_address: sender_addr.to_owned(),
+        source_collection: info.sender.to_owned(),
+        destination_collection: sn_coll_addr.to_owned(),
         block_height: env.block.height,
         block_time: env.block.time.seconds(),
     };
 
     // Load next primary key and save history to storage
-    let hist_id = next_history_pk(deps.storage)?;
-    history().save(deps.storage, U64Key::new(hist_id), &record)?;
+    // let hist_id = next_history_pk(deps.storage, &sender_addr, &token_id)?;
+    // HISTORY.save(deps.storage, (sender_addr.as_str(), &token_id, &hist_id), &record)?;
+    let hist_id = save_history(deps.storage, info.sender.to_owned(), token_id, record)?;
 
     Ok(Response::default()
         .add_attribute("action", "receive_nft")
-        .add_attribute("sender", record.source_address)
-        .add_attribute("cosmos_collection_addr", record.source_collection)
-        .add_attribute("secret_collection_addr", record.destination_collection)
+        .add_attribute("sender", sender_addr)
+        .add_attribute("cosmos_collection_addr", info.sender)
+        .add_attribute("secret_collection_addr", sn_coll_addr)
         .add_attribute("history_id", hist_id.to_string()))
 }
