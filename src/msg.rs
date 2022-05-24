@@ -44,16 +44,18 @@ pub enum ExecuteMsg {
         add: Option<Vec<CollectionMapping>>,
         /// List of source addresses to remove from the bridge
         /// * nb: this should rarely be used. Removing an collection that is already bridged could be seen as malicious behavior.
-        remove: Option<Vec<String>>,
+        remove: Option<Vec<CollectionMapping>>,
     },
 
     /// Transfer ownership of NFT to the new owner
     /// * contract_address, token_id is the key for our NFTs
     ReleaseNft {
-        /// Address of the recipient
+        /// The Terra address of the recipient
         recipient: String,
-        /// The contract address for the NFT
-        contract_address: String,
+        /// The SN contract address for the NFT
+        sn_collection: String,
+        /// The SN address that initiated the request
+        sn_address: String,
         /// The token_id for the NFT
         token_id: String,
     },
@@ -132,7 +134,7 @@ pub struct OperatorsResponse {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct CollectionMappingResponse {
-    pub destinations: Vec<Addr>,
+    pub destinations: Vec<String>,
 }
 
 /// Shows all bridge record for a specific token
@@ -142,18 +144,19 @@ pub struct HistoryResponse {
     pub history: Vec<BridgeRecordResponse>,
 }
 
+// TODO: Convert is_released to is_enter
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct BridgeRecordResponse {
-    /// true if the token has been successfully bridged to SN
-    pub is_bridged: bool,
     /// true if the token has been released from the bridge
     pub is_released: bool,
     /// id of bridged token
     pub token_id: String,
     /// the Terra address that initiated the SendMsg request
-    pub source_address: String,
+    pub source_address: Option<String>,
     /// the address of the Terra collection
     pub source_collection: String,
+    /// the SN address that initiated the SendMsg request
+    pub destination_address: Option<String>,
     /// the address of the SN collection
     pub destination_collection: String,
     /// the Terra block of the tx
@@ -164,13 +167,19 @@ pub struct BridgeRecordResponse {
 
 impl From<BridgeRecord> for BridgeRecordResponse {
     fn from(record: BridgeRecord) -> Self {
+        // Map the source address to an optional String
+        let mut source_address: Option<String> = None;
+        if let Some(addr) = record.source_address {
+            source_address = Some(addr.to_string());
+        }
+
         Self { 
-            is_bridged: record.is_bridged,
             is_released: record.is_released,
             token_id: record.token_id,
-            source_address: record.source_address.into_string(),
+            source_address: source_address,
             source_collection: record.source_collection.into_string(),
-            destination_collection: record.destination_collection.into_string(),
+            destination_address: record.destination_address,
+            destination_collection: record.destination_collection,
             block_height: record.block_height,
             block_time: record.block_time,
         }

@@ -3,7 +3,7 @@ use cw_storage_plus::Bound;
 
 use crate::{
     msg::{AdminsResponse, HistoryResponse, OperatorsResponse, CollectionMappingResponse, BridgeRecordResponse},
-    state::{HISTORY, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, COLLECTION_MAP}, error::ContractError,
+    state::{HISTORY, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, TERRA_TO_SN_MAP}, error::ContractError,
 };
 
 /*
@@ -46,11 +46,11 @@ pub fn query_collection_mappings(
         .iter()
         .map(|addr| {
             let addr = deps.api.addr_validate(addr)?;
-            let destination = COLLECTION_MAP.may_load(deps.storage, addr.clone())?
+            let destination = TERRA_TO_SN_MAP.may_load(deps.storage, addr.clone())?
                 .ok_or(ContractError::MappingNotFound { source_addr: addr.into_string() })?;
             Ok(destination)
         })
-        .collect::<Result<Vec<Addr>, ContractError>>()?;
+        .collect::<Result<Vec<String>, ContractError>>()?;
 
     Ok(to_binary(&CollectionMappingResponse { destinations })?)
 }

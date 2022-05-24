@@ -117,8 +117,6 @@ mod tests {
         );
     }
 
-    // add test for updating admins & operators
-    // check for required permission (fails with not an admin)
     #[test]
     fn update_admins() {
         // Instantiate contract
@@ -254,10 +252,10 @@ mod tests {
             // TODO: Add ContractInfo to hold this data
         
         /*
-         * Non-admin user cannot update collection mappings 
+         * Non-operator user cannot update collection mappings 
          */
 
-        let info_fail = mock_info("tommy", &[]);
+        let info_fail = mock_info("not an operator", &[]);
         let add_list = vec![
             CollectionMapping { source: "terra contract 1".to_string(), destination: "secret contract 1".to_string() },
             CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2".to_string() },
@@ -265,12 +263,11 @@ mod tests {
         let err = try_update_collection_mappings(deps.as_mut(), info_fail, None, Some(add_list.clone())).unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized");
 
-
         /*
-         * Admin can add items to the collection mappings
+         * Operator can add items to the collection mappings
          */
 
-        let info_success = mock_info(&CREATOR, &[]);
+        let info_success = mock_info("tommy", &[]);
         try_update_collection_mappings(deps.as_mut(), info_success.clone(), None, Some(add_list.clone())).unwrap();
         
         let sources = vec!["terra contract 1".into(), "terra contract 2".into()];
@@ -284,12 +281,15 @@ mod tests {
         assert_eq!(destinations, res_success);
 
         /*
-         * Admin can remove items from the collection mappings
+         * Operator can remove items from the collection mappings
          */
 
-        let rem_list = vec!["terra contract 1".to_string()];
+        let rem_list = vec![
+            CollectionMapping { source: "terra contract 1".to_string(), destination: "secret contract 1".to_string() },
+        ];
         try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), None).unwrap();
 
+        // TODO: Make this check the error when querying terra contract 1
         let sources = vec!["terra contract 2".to_string()];
         let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
         let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
@@ -303,7 +303,9 @@ mod tests {
          * and replaces it with the new mapping
          */
         
-        let rem_list = vec!["terra contract 2".to_string()];
+        let rem_list = vec![
+            CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2".to_string() },
+        ];
         let add_list = vec![
             CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2.0".to_string() },
         ];
@@ -359,20 +361,35 @@ mod tests {
         // Verify success
         let res_success = HistoryResponse {
             history: vec![ BridgeRecordResponse {
-                is_bridged: false,
                 is_released: false,
                 token_id: token_id,
-                source_address: "terra wallet".into(),
+                source_address: Some("terra wallet".into()),
                 source_collection: terra_coll_addr.into(),
+                destination_address: None, 
                 destination_collection: "secret contract".into(),
                 block_height: env.block.height,
-                block_time: env.block.time.seconds(),
+                block_time: env.block.time.seconds(), 
             }]
         };
         assert_eq!(response, res_success);
-
-
     }
 
-    // add test for cw721receive failing if the collection is not mapped
+    #[test]
+    fn release_nft() {
+        // Instantiate contract
+        let mut deps = mock_dependencies(&[]);
+        let info = mock_info(CREATOR, &[]);
+        let env = mock_env();
+        let initial_admins = get_admins();
+        let initial_opers = get_opers();
+        do_instantiate(deps.as_mut(), initial_admins.clone(), initial_opers).unwrap();
+
+        /*
+         * Non-operator cannot release an NFT from the bridge
+         */
+
+        /*
+         * Operator can release an NFT from the bridge
+         */
+    }
 }

@@ -1,8 +1,9 @@
-use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Binary, WasmMsg, to_binary};
+use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
 use crate::{
     error::ContractError,
-    state::{BridgeRecord, ADMINS, COLLECTION_MAP, OPERS, save_history}, msg::CollectionMapping,
+    state::{BridgeRecord, ADMINS, TERRA_TO_SN_MAP, OPERS, save_history, SN_TO_TERRA_MAP}, msg::CollectionMapping,
 };
 
 pub fn try_update_super_users(
@@ -68,7 +69,7 @@ pub fn try_update_super_users(
 
 /// Updates the collection mappings in storage.
 /// All items in `rem_list` are removed before adding items from `add_list`.
-/// * Sender must be an admin
+/// * Sender must be an admin or operator
 /// 
 /// # Arguments
 /// 
@@ -79,57 +80,108 @@ pub fn try_update_super_users(
 pub fn try_update_collection_mappings(
     deps: DepsMut,
     info: MessageInfo,
-    rem_list: Option<Vec<String>>,
+    rem_list: Option<Vec<CollectionMapping>>,
     add_list: Option<Vec<CollectionMapping>>,
 ) -> Result<Response, ContractError> {
-    // Verify sender is an admin
-    let admins = ADMINS.load(deps.storage)?;
+    // Verify sender is an operator
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
-    if !admins.contains(&sender_raw) {
+    if !check_auth(deps.storage, sender_raw)? {
         return Err(ContractError::Unauthorized { });
     }
 
-    // Remove items first so we can perform safely update a key's mapping in one message
-    for addr in rem_list.unwrap_or_default() {
-        let source = deps.api.addr_validate(&addr)?;
-        COLLECTION_MAP.remove(deps.storage, source);
+    // TODO: Verify all mappings match to prevent data corruption
+
+    // Remove items first so we can safely update a key's mapping in one message
+    for pair in rem_list.unwrap_or_default() {
+        let source = deps.api.addr_validate(&pair.source)?;
+        TERRA_TO_SN_MAP.remove(deps.storage, source);
+        SN_TO_TERRA_MAP.remove(deps.storage, pair.destination);
     }
 
     // Create new mapping in storage for each CollectionMapping
     for pair in add_list.unwrap_or_default() {
         let source = deps.api.addr_validate(&pair.source)?;
-        let dest = deps.api.addr_validate(&pair.destination)?;
-        COLLECTION_MAP.update(deps.storage, source.clone(), |existing| match existing {
+        let dest = pair.destination;
+        TERRA_TO_SN_MAP.update(deps.storage, source.to_owned(), |existing| match existing {
             // Do not allow key overwrites
-            Some(_) => Err(ContractError::MappingExists { source_addr: source.into_string() }),
-            None => Ok(dest),
+            Some(_) => Err(ContractError::MappingExists { source_addr: source.to_owned().into_string() }),
+            None => Ok(dest.to_owned()),
+        })?;
+        SN_TO_TERRA_MAP.update(deps.storage, dest.to_owned(), |existing| match existing {
+            // Do not allow key overwrites
+            Some(_) => Err(ContractError::MappingExists { source_addr: dest }),
+            None => Ok(source),
         })?;
     }
 
     Ok(Response::default().add_attribute("action", "update_collection_mappings"))
 }
 
+/// allow operators to release NFTs from bridge escrow
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
+/// * `env` - Env of the contract's environment
+/// * `info` - additional information about the message sender and attached funds
+/// * `sn_coll_addr` - the SN collection's address
+/// * `sn_sender` - the SN address that bridged the NFT
+/// * `coll_addr` - the Terra collection's address
+/// * `recipient` - the Terra address receiving the bridged NFTs
+/// * `token_id` - id of the token being bridged
 pub fn try_release_nft(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    sn_coll_addr: String,
+    sn_sender: String,
     recipient: String,
-    contract_address: String,
     token_id: String,
+    recipient_is_contract: bool,
 ) -> Result<Response, ContractError> {
-    // Check if sender is an operator
+    // Check if sender is an operator or admin
+    let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
+    if !check_auth(deps.storage, sender_raw)? {
+        return Err(ContractError::Unauthorized { });
+    }
 
-    // Validate the recipient address
+    let recipient_valid = deps.api.addr_validate(&recipient)?;
+    let terra_collection = SN_TO_TERRA_MAP.load(deps.storage, sn_coll_addr.to_owned())?;
 
-    // Call new the new contract to transfer ownership
+    // Create & save history
+    let record = BridgeRecord {
+        is_released: true,
+        token_id: token_id.to_owned(),
+        source_address: Some(recipient_valid.to_owned()),
+        source_collection: terra_collection.to_owned(),
+        destination_address: Some(sn_sender.to_owned()),
+        destination_collection: sn_coll_addr.to_owned(),
+        block_height: env.block.height,
+        block_time: env.block.time.seconds(),
+    };
+    let history_id = save_history(deps.storage, terra_collection.to_owned(), token_id.to_owned(), record)?;
+
+    // Create the "fire and forget" message to transfer ownership
+    let msg = if recipient_is_contract { 
+        TransferNft { recipient, token_id }
+    } else { 
+        SendNft { contract: recipient, token_id, msg: Binary::from(vec![]) }
+    };
+    let send = WasmMsg::Execute { 
+        contract_addr: terra_collection.into_string(),
+        msg: to_binary(&msg)?,
+        funds: vec![],
+    };
 
     Ok(Response::new()
-        // .add_submessage()
+        .add_message(send)
         .add_attribute("action", "transfer_nft")
-        .add_attribute("sender", info.sender)
+        .add_attribute("secret_sender", sn_sender)
         .add_attribute("recipient", recipient)
-        .add_attribute("contract_address", contract_address)
-        .add_attribute("token_id", token_id))
+        .add_attribute("terra_collection", terra_collection)
+        .add_attribute("secret_collection", sn_coll_addr)
+        .add_attribute("token_id", token_id)
+        .add_attribute("history_id", history_id.to_string()))
 }
 
 
@@ -144,25 +196,23 @@ pub fn try_receive_nft(
     let sender_addr = deps.api.addr_validate(&sender)?;
 
     // Check whitelist to see if the collection is mapped to Secret
-    let sn_coll_addr = COLLECTION_MAP
+    let sn_coll_addr = TERRA_TO_SN_MAP
         .may_load(deps.storage, info.sender.to_owned())?
         .ok_or(ContractError::UnauthorizedCollection { })?;
 
     // Save history
     let record = BridgeRecord {
-        is_bridged: false,
         token_id: token_id.to_owned(),
         is_released: false,
-        source_address: sender_addr.to_owned(),
+        source_address: Some(sender_addr.to_owned()),
         source_collection: info.sender.to_owned(),
+        destination_address: None,
         destination_collection: sn_coll_addr.to_owned(),
         block_height: env.block.height,
         block_time: env.block.time.seconds(),
     };
 
     // Load next primary key and save history to storage
-    // let hist_id = next_history_pk(deps.storage, &sender_addr, &token_id)?;
-    // HISTORY.save(deps.storage, (sender_addr.as_str(), &token_id, &hist_id), &record)?;
     let hist_id = save_history(deps.storage, info.sender.to_owned(), token_id, record)?;
 
     Ok(Response::default()
@@ -171,4 +221,16 @@ pub fn try_receive_nft(
         .add_attribute("cosmos_collection_addr", info.sender)
         .add_attribute("secret_collection_addr", sn_coll_addr)
         .add_attribute("history_id", hist_id.to_string()))
+}
+
+fn check_auth(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
+    let opers = OPERS.load(store)?;
+    if !opers.contains(&sender_raw) {
+        // Allow admins to update too
+        let admins = ADMINS.load(store)?;
+        if !admins.contains(&sender_raw) {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }

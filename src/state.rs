@@ -12,18 +12,18 @@ use serde::{Deserialize, Serialize};
 /// Storage for the history of a tokens bridging activity
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BridgeRecord {
-    /// true if the token has been successfully bridged to SN
-    pub is_bridged: bool,
     /// true if the token has been released from the bridge
     pub is_released: bool,
     /// id of bridged token
     pub token_id: String,
     /// the Terra address that initiated the SendMsg request
-    pub source_address: Addr,
+    pub source_address: Option<Addr>,
     /// the address of the Terra collection
     pub source_collection: Addr,
+    /// the SN address that initiated the SendMsg request
+    pub destination_address: Option<String>,
     /// the address of the SN collection
-    pub destination_collection: Addr,
+    pub destination_collection: String,
     /// the Terra block of the tx
     pub block_height: u64,
     /// the time (in seconds since 01/01/1970) of tx
@@ -51,7 +51,9 @@ pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 /// Vector of operators' raw addresses
 pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
 /// Mapping of a Terra contract's address to a Secret Network contract's address
-pub const COLLECTION_MAP: Map<Addr, Addr> = Map::new("c_to_s");
+pub const TERRA_TO_SN_MAP: Map<Addr, String> = Map::new("t_to_s");
+/// Mapping of a Terra contract's address to a Secret Network contract's address
+pub const SN_TO_TERRA_MAP: Map<String, Addr> = Map::new("s_to_t");
 /// Mapping of a Terra contract and token id to the number of TX records for that pair
 pub const HISTORY_COUNT: Map<(Addr, String), u64> = Map::new("history_pk");
 /// Mapping of a Terra contract, token id, and TX record id to the BridgeRecord for that TX
@@ -70,12 +72,12 @@ pub fn next_history_pk(
 
 pub fn save_history (
     store: &mut dyn Storage,
-    source_addr: Addr,
+    source_collection: Addr,
     token_id: String,
     record: BridgeRecord,
 ) -> StdResult<u64> {
-    let history_id: u64 = next_history_pk(store, source_addr.to_owned(), token_id.to_owned())?;
-    HISTORY.save(store, (source_addr, token_id, history_id.into()), &record)?;
+    let history_id: u64 = next_history_pk(store, source_collection.to_owned(), token_id.to_owned())?;
+    HISTORY.save(store, (source_collection, token_id, history_id.into()), &record)?;
     // Return history_id to be used in wasm attributes
     Ok(history_id)
 }
