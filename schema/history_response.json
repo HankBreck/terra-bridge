@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HistoryResponse",
+  "description": "Shows all bridge record for a specific token",
+  "type": "object",
+  "required": [
+    "history"
+  ],
+  "properties": {
+    "history": {
+      "description": "Information about an NFT from a given collection",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/BridgeRecordResponse"
+      }
+    }
+  },
+  "definitions": {
+    "BridgeRecordResponse": {
+      "type": "object",
+      "required": [
+        "block_height",
+        "block_time",
+        "destination_collection",
+        "is_released",
+        "source_collection",
+        "token_id"
+      ],
+      "properties": {
+        "block_height": {
+          "description": "the Terra block of the tx",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "block_time": {
+          "description": "the time (in seconds since 01/01/1970) of tx",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "destination_address": {
+          "description": "the SN address that initiated the SendMsg request",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "destination_collection": {
+          "description": "the address of the SN collection",
+          "type": "string"
+        },
+        "is_released": {
+          "description": "true if the token has been released from the bridge",
+          "type": "boolean"
+        },
+        "source_address": {
+          "description": "the Terra address that initiated the SendMsg request",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_collection": {
+          "description": "the address of the Terra collection",
+          "type": "string"
+        },
+        "token_id": {
+          "description": "id of bridged token",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

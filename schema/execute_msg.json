@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "description": "Update the contract's admins",
+      "type": "object",
+      "required": [
+        "update_admins"
+      ],
+      "properties": {
+        "update_admins": {
+          "type": "object",
+          "properties": {
+            "add": {
+              "description": "The addresses to add",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "remove": {
+              "description": "The addresses to remove",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update the contract's operators",
+      "type": "object",
+      "required": [
+        "update_operators"
+      ],
+      "properties": {
+        "update_operators": {
+          "type": "object",
+          "properties": {
+            "add": {
+              "description": "The addresses to add",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "remove": {
+              "description": "The addresses to remove",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Update the collection mappings used for whitelist. * to update a collections mapping you can remove the old mapping and add a new mapping in the same message",
+      "type": "object",
+      "required": [
+        "update_collection_mapping"
+      ],
+      "properties": {
+        "update_collection_mapping": {
+          "type": "object",
+          "properties": {
+            "add": {
+              "description": "List of source -> destination collection mappings that will be added to the contract's state",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/CollectionMapping"
+              }
+            },
+            "remove": {
+              "description": "List of source addresses to remove from the bridge * nb: this should rarely be used. Removing an collection that is already bridged could be seen as malicious behavior.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/CollectionMapping"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Transfer ownership of NFT to the new owner * contract_address, token_id is the key for our NFTs",
+      "type": "object",
+      "required": [
+        "release_nft"
+      ],
+      "properties": {
+        "release_nft": {
+          "type": "object",
+          "required": [
+            "recipient",
+            "recipient_is_contract",
+            "sn_address",
+            "sn_collection",
+            "token_id"
+          ],
+          "properties": {
+            "recipient": {
+              "description": "The Terra address of the recipient",
+              "type": "string"
+            },
+            "recipient_is_contract": {
+              "description": "True if the recipient address is a smart contract",
+              "type": "boolean"
+            },
+            "sn_address": {
+              "description": "The SN address that initiated the request",
+              "type": "string"
+            },
+            "sn_collection": {
+              "description": "The SN contract address for the NFT",
+              "type": "string"
+            },
+            "token_id": {
+              "description": "The token_id for the NFT",
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Accept cw721 NFT * https://docs.cosmwasm.com/cw-plus/0.9.0/cw721/spec/#receiver",
+      "type": "object",
+      "required": [
+        "receive_nft"
+      ],
+      "properties": {
+        "receive_nft": {
+          "$ref": "#/definitions/Cw721ReceiveMsg"
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "CollectionMapping": {
+      "type": "object",
+      "required": [
+        "destination",
+        "source"
+      ],
+      "properties": {
+        "destination": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "Cw721ReceiveMsg": {
+      "description": "Cw721ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg",
+      "type": "object",
+      "required": [
+        "msg",
+        "sender",
+        "token_id"
+      ],
+      "properties": {
+        "msg": {
+          "$ref": "#/definitions/Binary"
+        },
+        "sender": {
+          "type": "string"
+        },
+        "token_id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
