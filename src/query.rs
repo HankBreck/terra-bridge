@@ -2,8 +2,12 @@ use cosmwasm_std::{to_binary, Addr, Binary, CanonicalAddr, Deps, Order, StdResul
 use cw_storage_plus::Bound;
 
 use crate::{
-    msg::{AdminsResponse, HistoryResponse, OperatorsResponse, CollectionMappingResponse, BridgeRecordResponse},
-    state::{HISTORY, ADMINS, DEFAULT_LIMIT, MAX_LIMIT, OPERS, TERRA_TO_SN_MAP}, error::ContractError,
+    error::ContractError,
+    msg::{
+        AdminsResponse, BridgeRecordResponse, CollectionMappingResponse, HistoryResponse,
+        OperatorsResponse,
+    },
+    state::{ADMINS, DEFAULT_LIMIT, HISTORY, MAX_LIMIT, OPERS, TERRA_TO_SN_MAP},
 };
 
 /*
@@ -46,8 +50,11 @@ pub fn query_collection_mappings(
         .iter()
         .map(|addr| {
             let addr = deps.api.addr_validate(addr)?;
-            let destination = TERRA_TO_SN_MAP.may_load(deps.storage, addr.clone())?
-                .ok_or(ContractError::MappingNotFound { source_addr: addr.into_string() })?;
+            let destination = TERRA_TO_SN_MAP
+                .may_load(deps.storage, addr.clone())?
+                .ok_or(ContractError::MappingNotFound {
+                    source_addr: addr.into_string(),
+                })?;
             Ok(destination)
         })
         .collect::<Result<Vec<String>, ContractError>>()?;
@@ -74,10 +81,8 @@ pub fn query_history(
         .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         // Separate the record from the key
-        .map(|pair| {
-            Ok(pair?.1.into())
-        })
+        .map(|pair| Ok(pair?.1.into()))
         .collect::<Result<Vec<BridgeRecordResponse>, ContractError>>()?;
-        
+
     Ok(to_binary(&HistoryResponse { history })?)
 }

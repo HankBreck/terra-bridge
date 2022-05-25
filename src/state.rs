@@ -1,12 +1,14 @@
 use cosmwasm_std::{Addr, CanonicalAddr, StdResult, Storage};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex, U64Key, PrimaryKey, Prefixer};
+use cw_storage_plus::{
+    Index, IndexList, IndexedMap, Item, Map, MultiIndex, Prefixer, PrimaryKey, U64Key,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /*
  *
  * Type Definitions
- * 
+ *
  */
 
 /// Storage for the history of a tokens bridging activity
@@ -43,7 +45,7 @@ pub const DEFAULT_LIMIT: u8 = 15;
 pub const MAX_LIMIT: u8 = 30;
 
 /*
- * Storage 
+ * Storage
  */
 
 /// Boolean value that determines whether the bridge can receive and release tokens
@@ -67,19 +69,27 @@ pub fn next_history_pk(
     token_id: String,
 ) -> StdResult<u64> {
     let key_prefix = (source_addr, token_id);
-    let id: u64 = HISTORY_COUNT.load(store, key_prefix.clone()).unwrap_or(0u64) + 1;
+    let id: u64 = HISTORY_COUNT
+        .load(store, key_prefix.clone())
+        .unwrap_or(0u64)
+        + 1;
     HISTORY_COUNT.save(store, key_prefix, &id)?;
     Ok(id)
 }
 
-pub fn save_history (
+pub fn save_history(
     store: &mut dyn Storage,
     source_collection: Addr,
     token_id: String,
     record: BridgeRecord,
 ) -> StdResult<u64> {
-    let history_id: u64 = next_history_pk(store, source_collection.to_owned(), token_id.to_owned())?;
-    HISTORY.save(store, (source_collection, token_id, history_id.into()), &record)?;
+    let history_id: u64 =
+        next_history_pk(store, source_collection.to_owned(), token_id.to_owned())?;
+    HISTORY.save(
+        store,
+        (source_collection, token_id, history_id.into()),
+        &record,
+    )?;
     // Return history_id to be used in wasm attributes
     Ok(history_id)
 }

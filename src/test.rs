@@ -3,16 +3,22 @@ mod tests {
     use cosmwasm_std::{
         from_binary,
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Api, DepsMut, Response, WasmMsg, to_binary,
+        to_binary, Addr, Api, DepsMut, Response, WasmMsg,
     };
     use cw721::Cw721ExecuteMsg;
 
     use crate::{
         contract::instantiate,
         error::ContractError,
-        execute::{try_update_super_users, try_update_collection_mappings, try_receive_nft, try_release_nft, try_update_pause},
-        msg::{AdminsResponse, InstantiateMsg, OperatorsResponse, CollectionMapping, CollectionMappingResponse, HistoryResponse, BridgeRecordResponse},
-        query::{query_admins, query_operators, query_collection_mappings, query_history},
+        execute::{
+            try_receive_nft, try_release_nft, try_update_collection_mappings, try_update_pause,
+            try_update_super_users,
+        },
+        msg::{
+            AdminsResponse, BridgeRecordResponse, CollectionMapping, CollectionMappingResponse,
+            HistoryResponse, InstantiateMsg, OperatorsResponse,
+        },
+        query::{query_admins, query_collection_mappings, query_history, query_operators},
     };
 
     // Static variables for testing
@@ -243,17 +249,25 @@ mod tests {
         let initial_admins = get_admins();
         let initial_opers = get_opers();
         do_instantiate(deps.as_mut(), initial_admins.clone(), initial_opers).unwrap();
-        
+
         /*
-         * Non-operator user cannot update collection mappings 
+         * Non-operator user cannot update collection mappings
          */
 
         let info_fail = mock_info("not an operator", &[]);
         let add_list = vec![
-            CollectionMapping { source: "terra contract 1".to_string(), destination: "secret contract 1".to_string() },
-            CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2".to_string() },
+            CollectionMapping {
+                source: "terra contract 1".to_string(),
+                destination: "secret contract 1".to_string(),
+            },
+            CollectionMapping {
+                source: "terra contract 2".to_string(),
+                destination: "secret contract 2".to_string(),
+            },
         ];
-        let err = try_update_collection_mappings(deps.as_mut(), info_fail, None, Some(add_list.clone())).unwrap_err();
+        let err =
+            try_update_collection_mappings(deps.as_mut(), info_fail, None, Some(add_list.clone()))
+                .unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized");
 
         /*
@@ -261,12 +275,18 @@ mod tests {
          */
 
         let info_success = mock_info("tommy", &[]);
-        try_update_collection_mappings(deps.as_mut(), info_success.clone(), None, Some(add_list.clone())).unwrap();
-        
+        try_update_collection_mappings(
+            deps.as_mut(),
+            info_success.clone(),
+            None,
+            Some(add_list.clone()),
+        )
+        .unwrap();
+
         let sources = vec!["terra contract 1".into(), "terra contract 2".into()];
         let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
         let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
-        
+
         let res_success = vec![
             deps.api.addr_validate("secret contract 1").unwrap(),
             deps.api.addr_validate("secret contract 2").unwrap(),
@@ -277,18 +297,18 @@ mod tests {
          * Operator can remove items from the collection mappings
          */
 
-        let rem_list = vec![
-            CollectionMapping { source: "terra contract 1".to_string(), destination: "secret contract 1".to_string() },
-        ];
-        try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), None).unwrap();
+        let rem_list = vec![CollectionMapping {
+            source: "terra contract 1".to_string(),
+            destination: "secret contract 1".to_string(),
+        }];
+        try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), None)
+            .unwrap();
 
         // TODO: Make this check the error when querying terra contract 1
         let sources = vec!["terra contract 2".to_string()];
         let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
         let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
-        let res_success = vec![
-            deps.api.addr_validate("secret contract 2").unwrap(),
-        ];
+        let res_success = vec![deps.api.addr_validate("secret contract 2").unwrap()];
         assert_eq!(destinations, res_success);
 
         /*
@@ -299,23 +319,29 @@ mod tests {
          * Removing and adding mappings for the same source collection removes the existing mapping
          * and replaces it with the new mapping
          */
-        
-        let rem_list = vec![
-            CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2".to_string() },
-        ];
-        let add_list = vec![
-            CollectionMapping { source: "terra contract 2".to_string(), destination: "secret contract 2.0".to_string() },
-        ];
-        try_update_collection_mappings(deps.as_mut(), info_success.clone(), Some(rem_list), Some(add_list)).unwrap();
+
+        let rem_list = vec![CollectionMapping {
+            source: "terra contract 2".to_string(),
+            destination: "secret contract 2".to_string(),
+        }];
+        let add_list = vec![CollectionMapping {
+            source: "terra contract 2".to_string(),
+            destination: "secret contract 2.0".to_string(),
+        }];
+        try_update_collection_mappings(
+            deps.as_mut(),
+            info_success.clone(),
+            Some(rem_list),
+            Some(add_list),
+        )
+        .unwrap();
 
         let sources = vec!["terra contract 2".to_string()];
         let dest_bin = query_collection_mappings(deps.as_ref(), sources).unwrap();
         let CollectionMappingResponse { destinations } = from_binary(&dest_bin).unwrap();
         assert_eq!(destinations.len(), 1);
-        
-        let res_success = vec![
-            deps.api.addr_validate("secret contract 2.0").unwrap(),
-        ];
+
+        let res_success = vec![deps.api.addr_validate("secret contract 2.0").unwrap()];
         assert_eq!(destinations, res_success);
     }
 
@@ -337,7 +363,14 @@ mod tests {
         let info_contract = mock_info(terra_coll_addr, &[]);
         let sender = "terra wallet".to_string();
         let token_id = "0".to_string();
-        let err = try_receive_nft(deps.as_mut(), env.clone(), info_contract.clone(), sender.clone(), token_id.clone()).unwrap_err();
+        let err = try_receive_nft(
+            deps.as_mut(),
+            env.clone(),
+            info_contract.clone(),
+            sender.clone(),
+            token_id.clone(),
+        )
+        .unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized collection");
 
         /*
@@ -345,28 +378,49 @@ mod tests {
          */
 
         // Add collection mapping for sender
-        let add_list = vec![
-            CollectionMapping { source: terra_coll_addr.into(), destination: "secret contract".into() }
-        ];
-        try_update_collection_mappings(deps.as_mut(), info_admin.clone(), None, Some(add_list.clone())).unwrap();
+        let add_list = vec![CollectionMapping {
+            source: terra_coll_addr.into(),
+            destination: "secret contract".into(),
+        }];
+        try_update_collection_mappings(
+            deps.as_mut(),
+            info_admin.clone(),
+            None,
+            Some(add_list.clone()),
+        )
+        .unwrap();
 
         // Send NFT to the contract
-        try_receive_nft(deps.as_mut(), env.clone(), info_contract.clone(), sender.clone(), token_id.clone()).unwrap();
-        let response_bin = &query_history(deps.as_ref(), terra_coll_addr.into(), token_id.clone(), None, Some(1u8)).unwrap();
+        try_receive_nft(
+            deps.as_mut(),
+            env.clone(),
+            info_contract.clone(),
+            sender.clone(),
+            token_id.clone(),
+        )
+        .unwrap();
+        let response_bin = &query_history(
+            deps.as_ref(),
+            terra_coll_addr.into(),
+            token_id.clone(),
+            None,
+            Some(1u8),
+        )
+        .unwrap();
         let response: HistoryResponse = from_binary(&response_bin).unwrap();
 
         // Verify success
         let res_success = HistoryResponse {
-            history: vec![ BridgeRecordResponse {
+            history: vec![BridgeRecordResponse {
                 is_released: false,
                 token_id: token_id.clone(),
                 source_address: Some("terra wallet".into()),
                 source_collection: terra_coll_addr.into(),
-                destination_address: None, 
+                destination_address: None,
                 destination_collection: "secret contract".into(),
                 block_height: env.block.height,
-                block_time: env.block.time.seconds(), 
-            }]
+                block_time: env.block.time.seconds(),
+            }],
         };
         assert_eq!(response, res_success);
 
@@ -378,7 +432,10 @@ mod tests {
         try_update_pause(deps.as_mut(), info_admin, true).unwrap();
 
         let err = try_receive_nft(deps.as_mut(), env, info_contract, sender, token_id).unwrap_err();
-        assert_eq!(err.to_string(), "Bridge is in the paused state. Tokens cannot be transfered in or out.");
+        assert_eq!(
+            err.to_string(),
+            "Bridge is in the paused state. Tokens cannot be transfered in or out."
+        );
     }
 
     #[test]
@@ -394,69 +451,82 @@ mod tests {
         // Generate collection mappings
         let terra_coll_addr = "terra contract".to_string();
         let sn_coll_addr = "secret contract".to_string();
-        let add_list = vec![
-            CollectionMapping { source: terra_coll_addr.to_owned(), destination: sn_coll_addr.to_owned() }
-        ];
-        try_update_collection_mappings(deps.as_mut(), info_admin.clone(), None, Some(add_list.clone())).unwrap();
+        let add_list = vec![CollectionMapping {
+            source: terra_coll_addr.to_owned(),
+            destination: sn_coll_addr.to_owned(),
+        }];
+        try_update_collection_mappings(
+            deps.as_mut(),
+            info_admin.clone(),
+            None,
+            Some(add_list.clone()),
+        )
+        .unwrap();
 
         // Send NFT to the contract
         let info_contract = mock_info(&terra_coll_addr, &[]);
         let sender = "terra sender".to_string();
         let token_id = "token_id".to_string();
-        try_receive_nft(deps.as_mut(), env.to_owned(), info_contract, sender, token_id.to_owned()).unwrap();
-        
+        try_receive_nft(
+            deps.as_mut(),
+            env.to_owned(),
+            info_contract,
+            sender,
+            token_id.to_owned(),
+        )
+        .unwrap();
+
         /*
-        * Non-operator cannot release an NFT from the bridge
-        */
+         * Non-operator cannot release an NFT from the bridge
+         */
 
         let info_fail = mock_info("not an operator", &[]);
         let sn_sender = "secret sender".to_string();
         let recipient = "terra recipient".to_string();
         let err = try_release_nft(
-            deps.as_mut(), 
-            env.to_owned(), 
-            info_fail, 
-            sn_coll_addr.to_owned(), 
-            sn_sender.to_owned(), 
-            recipient.to_owned(), 
-            token_id.to_owned(), 
-            false
-        ).unwrap_err();
+            deps.as_mut(),
+            env.to_owned(),
+            info_fail,
+            sn_coll_addr.to_owned(),
+            sn_sender.to_owned(),
+            recipient.to_owned(),
+            token_id.to_owned(),
+            false,
+        )
+        .unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized");
-        
+
         /*
-        * Operator can release an NFT from the bridge to a non-contract account
-        */
+         * Operator can release an NFT from the bridge to a non-contract account
+         */
 
         let info_oper = mock_info("tommy", &[]);
         let response = try_release_nft(
-            deps.as_mut(), 
-            env.to_owned(), 
-            info_oper.to_owned(), 
-            sn_coll_addr.to_owned(), 
-            sn_sender.to_owned(), 
-            recipient.to_owned(), 
-            token_id.to_owned(), 
+            deps.as_mut(),
+            env.to_owned(),
+            info_oper.to_owned(),
+            sn_coll_addr.to_owned(),
+            sn_sender.to_owned(),
+            recipient.to_owned(),
+            token_id.to_owned(),
             false,
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(response.messages.len(), 1);
 
         // Get the history id to test the response
-        let history_id = response.attributes
-            .last()
-            .unwrap()
-            .value
-            .to_owned();
+        let history_id = response.attributes.last().unwrap().value.to_owned();
 
         // Construct expected WasmMsg
-        let transfer_bin = to_binary(&Cw721ExecuteMsg::TransferNft { 
-            recipient: recipient.to_owned(), 
-            token_id: token_id.to_owned() 
-        }).unwrap();
-        let expected = WasmMsg::Execute { 
-            contract_addr: terra_coll_addr.to_owned(), 
-            msg: transfer_bin, 
-            funds: vec![], 
+        let transfer_bin = to_binary(&Cw721ExecuteMsg::TransferNft {
+            recipient: recipient.to_owned(),
+            token_id: token_id.to_owned(),
+        })
+        .unwrap();
+        let expected = WasmMsg::Execute {
+            contract_addr: terra_coll_addr.to_owned(),
+            msg: transfer_bin,
+            funds: vec![],
         };
 
         assert_eq!(
@@ -475,21 +545,24 @@ mod tests {
         /*
          * Operator cannot release an NFT from the bridge when it is paused
          */
-        
+
         // Pause the bridge
         try_update_pause(deps.as_mut(), info_admin, true).unwrap();
-        
-        let err = try_release_nft(
-            deps.as_mut(), 
-            env, 
-            info_oper, 
-            sn_coll_addr, 
-            sn_sender, 
-            recipient, 
-            token_id, 
-            false
-        ).unwrap_err();
-        assert_eq!(err.to_string(), "Bridge is in the paused state. Tokens cannot be transfered in or out.");
 
+        let err = try_release_nft(
+            deps.as_mut(),
+            env,
+            info_oper,
+            sn_coll_addr,
+            sn_sender,
+            recipient,
+            token_id,
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Bridge is in the paused state. Tokens cannot be transfered in or out."
+        );
     }
 }

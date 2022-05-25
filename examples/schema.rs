@@ -1,8 +1,10 @@
 use std::{env::current_dir, fs::create_dir_all};
 
-use cosmwasm_schema::{remove_schemas, export_schema, schema_for, export_schema_with_title};
-use terra_bridge::msg::{InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, AdminsResponse, OperatorsResponse, HistoryResponse, CollectionMappingResponse};
-
+use cosmwasm_schema::{export_schema, export_schema_with_title, remove_schemas, schema_for};
+use terra_bridge::msg::{
+    AdminsResponse, CollectionMappingResponse, ExecuteMsg, HistoryResponse, InstantiateMsg,
+    MigrateMsg, OperatorsResponse, QueryMsg,
+};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -18,7 +20,15 @@ fn main() {
 
     // Export schema for query response messages
     export_schema_with_title(&schema_for!(AdminsResponse), &out_dir, "AdminsResponse");
-    export_schema_with_title(&schema_for!(OperatorsResponse), &out_dir, "OperatorsResponse");
-    export_schema_with_title(&schema_for!(CollectionMappingResponse), &out_dir, "CollectionMappingResponse");
+    export_schema_with_title(
+        &schema_for!(OperatorsResponse),
+        &out_dir,
+        "OperatorsResponse",
+    );
+    export_schema_with_title(
+        &schema_for!(CollectionMappingResponse),
+        &out_dir,
+        "CollectionMappingResponse",
+    );
     export_schema_with_title(&schema_for!(HistoryResponse), &out_dir, "HistoryResponse");
 }

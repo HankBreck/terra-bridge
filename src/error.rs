@@ -22,5 +22,5 @@ pub enum ContractError {
     MappingNotFound { source_addr: String },
 
     #[error("Bridge is in the paused state. Tokens cannot be transfered in or out.")]
-    BridgePaused {}, 
+    BridgePaused {},
 }

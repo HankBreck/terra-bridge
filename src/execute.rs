@@ -1,11 +1,16 @@
-use cosmwasm_std::{CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Binary, WasmMsg, to_binary};
+use cosmwasm_std::{
+    to_binary, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    WasmMsg,
+};
 use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
 use crate::{
     error::ContractError,
-    state::{BridgeRecord, ADMINS, TERRA_TO_SN_MAP, OPERS, save_history, SN_TO_TERRA_MAP, IS_PAUSED}, msg::CollectionMapping,
+    msg::CollectionMapping,
+    state::{
+        save_history, BridgeRecord, ADMINS, IS_PAUSED, OPERS, SN_TO_TERRA_MAP, TERRA_TO_SN_MAP,
+    },
 };
-
 
 /// Allows operators to release NFTs from bridge escrow.
 ///
@@ -77,18 +82,18 @@ pub fn try_update_super_users(
 
 pub fn try_update_pause(
     deps: DepsMut,
-    info: MessageInfo, 
+    info: MessageInfo,
     pause: bool,
 ) -> Result<Response, ContractError> {
     // Verify sender is an admin
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
     if !check_is_admin(deps.storage, sender_raw)? {
-        return Err(ContractError::Unauthorized { });
+        return Err(ContractError::Unauthorized {});
     }
 
     // Update state with the new value
     IS_PAUSED.save(deps.storage, &pause)?;
-    
+
     Ok(Response::new()
         .add_attribute("action", "update_pause")
         .add_attribute("new_value", pause.to_string()))
@@ -97,9 +102,9 @@ pub fn try_update_pause(
 /// Updates the collection mappings in storage.
 /// All items in `rem_list` are removed before adding items from `add_list`.
 /// * Sender must be an admin or operator
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `deps` - a mutable reference to Extern containing all the contract's external dependencies
 /// * `info` - additional information about the contract's caller
 /// * `add_list` - a list of [CollectionMapping]s to be stored
@@ -113,17 +118,19 @@ pub fn try_update_collection_mappings(
     // Verify sender is an operator
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
     if !check_is_operator(deps.storage, sender_raw)? {
-        return Err(ContractError::Unauthorized { });
+        return Err(ContractError::Unauthorized {});
     }
 
     // Remove items first so we can safely update a key's mapping in one message
     for pair in rem_list.unwrap_or_default() {
         let source = deps.api.addr_validate(&pair.source)?;
         let existing_dest = TERRA_TO_SN_MAP.load(deps.storage, source.to_owned())?;
-        
+
         // Ensure mapping is valid before removing keys
         if existing_dest != pair.destination {
-            return Err(ContractError::MappingNotFound { source_addr: source.into_string() });
+            return Err(ContractError::MappingNotFound {
+                source_addr: source.into_string(),
+            });
         }
         TERRA_TO_SN_MAP.remove(deps.storage, source);
         SN_TO_TERRA_MAP.remove(deps.storage, pair.destination);
@@ -135,7 +142,9 @@ pub fn try_update_collection_mappings(
         let dest = pair.destination;
         TERRA_TO_SN_MAP.update(deps.storage, source.to_owned(), |existing| match existing {
             // Do not allow key overwrites
-            Some(_) => Err(ContractError::MappingExists { source_addr: source.to_owned().into_string() }),
+            Some(_) => Err(ContractError::MappingExists {
+                source_addr: source.to_owned().into_string(),
+            }),
             None => Ok(dest.to_owned()),
         })?;
         SN_TO_TERRA_MAP.update(deps.storage, dest.to_owned(), |existing| match existing {
@@ -173,13 +182,13 @@ pub fn try_release_nft(
     // Check if the bridge is paused
     let is_paused = IS_PAUSED.load(deps.storage)?;
     if is_paused {
-        return Err(ContractError::BridgePaused { });
+        return Err(ContractError::BridgePaused {});
     }
 
     // Check if sender is an operator or admin
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
     if !check_is_operator(deps.storage, sender_raw)? {
-        return Err(ContractError::Unauthorized { });
+        return Err(ContractError::Unauthorized {});
     }
 
     let recipient_valid = deps.api.addr_validate(&recipient)?;
@@ -196,16 +205,28 @@ pub fn try_release_nft(
         block_height: env.block.height,
         block_time: env.block.time.seconds(),
     };
-    let history_id = save_history(deps.storage, terra_collection.to_owned(), token_id.to_owned(), record)?;
+    let history_id = save_history(
+        deps.storage,
+        terra_collection.to_owned(),
+        token_id.to_owned(),
+        record,
+    )?;
 
     // Create the "fire and forget" message to transfer ownership
-    let msg = if recipient_is_contract { 
-        SendNft { contract: recipient.to_owned(), token_id: token_id.to_owned(), msg: Binary::from(vec![]) }
-    } else { 
-        TransferNft { recipient: recipient.to_owned(), token_id: token_id.to_owned() }
+    let msg = if recipient_is_contract {
+        SendNft {
+            contract: recipient.to_owned(),
+            token_id: token_id.to_owned(),
+            msg: Binary::from(vec![]),
+        }
+    } else {
+        TransferNft {
+            recipient: recipient.to_owned(),
+            token_id: token_id.to_owned(),
+        }
     };
 
-    let send = WasmMsg::Execute { 
+    let send = WasmMsg::Execute {
         contract_addr: terra_collection.to_owned().into(),
         msg: to_binary(&msg)?,
         funds: vec![],
@@ -241,7 +262,7 @@ pub fn try_receive_nft(
     // Check if the bridge is paused
     let is_paused = IS_PAUSED.load(deps.storage)?;
     if is_paused {
-        return Err(ContractError::BridgePaused { });
+        return Err(ContractError::BridgePaused {});
     }
 
     // Validate NFT sender
@@ -250,7 +271,7 @@ pub fn try_receive_nft(
     // Check whitelist to see if the collection is mapped to Secret
     let sn_coll_addr = TERRA_TO_SN_MAP
         .may_load(deps.storage, info.sender.to_owned())?
-        .ok_or(ContractError::UnauthorizedCollection { })?;
+        .ok_or(ContractError::UnauthorizedCollection {})?;
 
     // Save history
     let record = BridgeRecord {

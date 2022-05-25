@@ -16,11 +16,9 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-
     /*
      * Admin messages
      */
-
     /// Update the contract's admins
     UpdateAdmins {
         /// The addresses to add
@@ -39,7 +37,7 @@ pub enum ExecuteMsg {
 
     /// Update the state of the bridge
     UpdatePause {
-        /// `true` to move the bridge to the paused state, 
+        /// `true` to move the bridge to the paused state,
         /// `false` to move the bridge out of the paused stated
         pause: bool,
     },
@@ -47,7 +45,6 @@ pub enum ExecuteMsg {
     /*
      * Operator messages
      */
-
     /// Update the collection mappings used for whitelist.
     /// * to update a collections mapping you can remove the old mapping and add a new mapping in the same message
     UpdateCollectionMapping {
@@ -76,7 +73,6 @@ pub enum ExecuteMsg {
     /*
      * General messages
      */
-
     /// Accept cw721 NFT
     /// * https://docs.cosmwasm.com/cw-plus/0.9.0/cw721/spec/#receiver
     ReceiveNft(Cw721ReceiveMsg),
@@ -91,7 +87,7 @@ pub enum QueryMsg {
     /// Lists the contract's operators
     Operators {},
 
-    /// Returns the Secret network address associated with `source_contract` if a mapping exists. 
+    /// Returns the Secret network address associated with `source_contract` if a mapping exists.
     CollectionMappings { source_contracts: Vec<String> },
 
     /// Lists the information for a given NFT
@@ -107,17 +103,16 @@ pub enum QueryMsg {
         /// Used in pagination.
         limit: Option<u8>,
     },
-
     // TODO: add ContractInfo query showing:
-        // is paused
-        // admins
-        // operators
+    // is paused
+    // admins
+    // operators
 }
 
 /*
  *
  * Util Structs used in messages
- * 
+ *
  */
 
 /*
@@ -136,9 +131,7 @@ pub struct CollectionMapping {
 
 /// Contract configuration
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct ContractInfoResponse {
-
-}
+pub struct ContractInfoResponse {}
 
 /// Shows the contract's admins
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -195,7 +188,7 @@ impl From<BridgeRecord> for BridgeRecordResponse {
             source_address = Some(addr.to_string());
         }
 
-        Self { 
+        Self {
             is_released: record.is_released,
             token_id: record.token_id,
             source_address: source_address,
@@ -207,7 +200,6 @@ impl From<BridgeRecord> for BridgeRecordResponse {
         }
     }
 }
-
 
 /// TODO: Test migration
 pub struct MigrateMsg {
