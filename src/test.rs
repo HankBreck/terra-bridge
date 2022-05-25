@@ -86,9 +86,9 @@ mod tests {
         );
 
         // TODO: check history_pk is 0
-        // Add config to state
-        // Add config query
-        // Add update for pause
+            // Add config to state
+            // Add config query
+            // Add update for pause
     }
 
     #[test]

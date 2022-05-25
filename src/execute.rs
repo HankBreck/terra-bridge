@@ -6,6 +6,16 @@ use crate::{
     state::{BridgeRecord, ADMINS, TERRA_TO_SN_MAP, OPERS, save_history, SN_TO_TERRA_MAP}, msg::CollectionMapping,
 };
 
+
+/// Allows operators to release NFTs from bridge escrow.
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
+/// * `info` - additional information about the message sender and attached funds
+/// * `is_admin` - `true` to update admins, `false` to update operators
+/// * `add_list` - a list of [CollectionMapping] structures to add
+/// * `remove_list` - a list of [CollectionMapping] structures to remove
 pub fn try_update_super_users(
     deps: DepsMut,
     info: MessageInfo,
@@ -62,8 +72,6 @@ pub fn try_update_super_users(
     }
 
     let action = format!("update_{}", if is_admin { "admins" } else { "operators" });
-
-    // TODO: Add response attributes
     Ok(Response::default().add_attribute("action", action))
 }
 
@@ -117,7 +125,7 @@ pub fn try_update_collection_mappings(
     Ok(Response::default().add_attribute("action", "update_collection_mappings"))
 }
 
-/// allow operators to release NFTs from bridge escrow
+/// Allows operators to release NFTs from bridge escrow.
 ///
 /// # Arguments
 ///
@@ -185,7 +193,15 @@ pub fn try_release_nft(
         .add_attribute("history_id", history_id.to_string()))
 }
 
-
+/// Allows operators to release NFTs from bridge escrow.
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
+/// * `env` - Env of the contract's environment
+/// * `info` - additional information about the message sender and attached funds
+/// * `sender` - the Terra address bridging the NFT (from Cw721ReceiveMsg)
+/// * `token_id` - id of the token being bridged
 pub fn try_receive_nft(
     deps: DepsMut,
     env: Env,
