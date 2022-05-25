@@ -3,7 +3,7 @@ mod tests {
     use cosmwasm_std::{
         from_binary,
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Api, DepsMut, Response, WasmMsg, to_binary, SubMsg, CosmosMsg,
+        Addr, Api, DepsMut, Response, WasmMsg, to_binary,
     };
     use cw721::Cw721ExecuteMsg;
 
@@ -248,9 +248,6 @@ mod tests {
         let initial_admins = get_admins();
         let initial_opers = get_opers();
         do_instantiate(deps.as_mut(), initial_admins.clone(), initial_opers).unwrap();
-
-        // Verify mappings count is 0
-            // TODO: Add ContractInfo to hold this data
         
         /*
          * Non-operator user cannot update collection mappings 
@@ -298,6 +295,10 @@ mod tests {
             deps.api.addr_validate("secret contract 2").unwrap(),
         ];
         assert_eq!(destinations, res_success);
+
+        /*
+         * TODO: Remove fails when an invalid mapping is passed
+         */
 
         /*
          * Removing and adding mappings for the same source collection removes the existing mapping
@@ -417,9 +418,15 @@ mod tests {
             false
         ).unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized");
+
+        /*
+         * Operator cannot release an NFT from the bridge when it is paused
+         */
+
+        
         
         /*
-        * Operator can release an NFT from the bridge
+        * Operator can release an NFT from the bridge to a non-contract account
         */
 
         let response = try_release_nft(
@@ -464,6 +471,10 @@ mod tests {
                 .add_attribute("token_id", token_id)
                 .add_attribute("history_id", history_id.to_string())
         );
+
+        /*
+        * Operator can release an NFT from the bridge to a contract account
+        */
 
     }
 }

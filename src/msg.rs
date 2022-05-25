@@ -37,6 +37,17 @@ pub enum ExecuteMsg {
         remove: Option<Vec<String>>,
     },
 
+    /// Update the state of the bridge
+    UpdatePause {
+        /// `true` to move the bridge to the paused state, 
+        /// `false` to move the bridge out of the paused stated
+        pause: bool,
+    },
+
+    /*
+     * Operator messages
+     */
+
     /// Update the collection mappings used for whitelist.
     /// * to update a collections mapping you can remove the old mapping and add a new mapping in the same message
     UpdateCollectionMapping {
@@ -61,6 +72,10 @@ pub enum ExecuteMsg {
         /// True if the recipient address is a smart contract
         recipient_is_contract: bool,
     },
+
+    /*
+     * General messages
+     */
 
     /// Accept cw721 NFT
     /// * https://docs.cosmwasm.com/cw-plus/0.9.0/cw721/spec/#receiver
@@ -92,6 +107,11 @@ pub enum QueryMsg {
         /// Used in pagination.
         limit: Option<u8>,
     },
+
+    // TODO: add ContractInfo query showing:
+        // is paused
+        // admins
+        // operators
 }
 
 /*

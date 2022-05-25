@@ -1,19 +1,15 @@
 use cosmwasm_std::{
     entry_point, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
 };
-use cw2::set_contract_version;
 
 use crate::{
     error::ContractError,
-    execute::{try_receive_nft, try_release_nft, try_update_super_users, try_update_collection_mappings},
+    execute::{try_receive_nft, try_release_nft, try_update_super_users, try_update_collection_mappings, try_update_pause},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     query::{query_admins, query_history, query_operators, query_collection_mappings},
-    state::{ADMINS, OPERS},
+    state::{ADMINS, OPERS, IS_PAUSED},
 };
 
-// version info for migration info
-const CONTRACT_NAME: &str = "terra-bridge";
-const CONTRACT_VERSION: &str = env!("CARGO");
 
 #[entry_point]
 pub fn instantiate(
@@ -53,7 +49,7 @@ pub fn instantiate(
     // Initialize the state
     ADMINS.save(deps.storage, &admins_valid)?;
     OPERS.save(deps.storage, &opers_valid)?;
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    IS_PAUSED.save(deps.storage, &false)?;
 
     Ok(Response::default()
         .add_attribute("action", "instantiate")
@@ -79,9 +75,11 @@ pub fn execute(
             try_update_super_users(deps, info, false, add, remove)
         }
 
-        ExecuteMsg::UpdateCollectionMapping { add, remove } => try_update_collection_mappings(deps, info, remove, add),
-
         // Sender must be admin or operator
+
+        ExecuteMsg::UpdatePause { pause } => try_update_pause(deps, info, pause),
+
+        ExecuteMsg::UpdateCollectionMapping { add, remove } => try_update_collection_mappings(deps, info, remove, add),
 
         ExecuteMsg::ReleaseNft {
             recipient,

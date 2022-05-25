@@ -19,5 +19,8 @@ pub enum ContractError {
     MappingExists { source_addr: String },
 
     #[error("Collection mapping not found for Terra address {source_addr:?}")]
-    MappingNotFound { source_addr: String }
+    MappingNotFound { source_addr: String },
+
+    #[error("Bridge is in the paused state. Tokens cannot be transfered in or out.")]
+    BridgePaused {}, 
 }

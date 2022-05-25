@@ -3,7 +3,7 @@ use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
 use crate::{
     error::ContractError,
-    state::{BridgeRecord, ADMINS, TERRA_TO_SN_MAP, OPERS, save_history, SN_TO_TERRA_MAP}, msg::CollectionMapping,
+    state::{BridgeRecord, ADMINS, TERRA_TO_SN_MAP, OPERS, save_history, SN_TO_TERRA_MAP, IS_PAUSED}, msg::CollectionMapping,
 };
 
 
@@ -75,6 +75,25 @@ pub fn try_update_super_users(
     Ok(Response::default().add_attribute("action", action))
 }
 
+pub fn try_update_pause(
+    deps: DepsMut,
+    info: MessageInfo, 
+    pause: bool,
+) -> Result<Response, ContractError> {
+    // Verify sender is an admin
+    let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
+    if !check_is_admin(deps.storage, sender_raw)? {
+        return Err(ContractError::Unauthorized { });
+    }
+
+    // Update state with the new value
+    IS_PAUSED.save(deps.storage, &pause)?;
+    
+    Ok(Response::new()
+        .add_attribute("action", "update_pause")
+        .add_attribute("new_value", pause.to_string()))
+}
+
 /// Updates the collection mappings in storage.
 /// All items in `rem_list` are removed before adding items from `add_list`.
 /// * Sender must be an admin or operator
@@ -93,15 +112,19 @@ pub fn try_update_collection_mappings(
 ) -> Result<Response, ContractError> {
     // Verify sender is an operator
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
-    if !check_auth(deps.storage, sender_raw)? {
+    if !check_is_operator(deps.storage, sender_raw)? {
         return Err(ContractError::Unauthorized { });
     }
-
-    // TODO: Verify all mappings match to prevent data corruption
 
     // Remove items first so we can safely update a key's mapping in one message
     for pair in rem_list.unwrap_or_default() {
         let source = deps.api.addr_validate(&pair.source)?;
+        let existing_dest = TERRA_TO_SN_MAP.load(deps.storage, source.to_owned())?;
+        
+        // Ensure mapping is valid before removing keys
+        if existing_dest != pair.destination {
+            return Err(ContractError::MappingNotFound { source_addr: source.into_string() });
+        }
         TERRA_TO_SN_MAP.remove(deps.storage, source);
         SN_TO_TERRA_MAP.remove(deps.storage, pair.destination);
     }
@@ -147,9 +170,15 @@ pub fn try_release_nft(
     token_id: String,
     recipient_is_contract: bool,
 ) -> Result<Response, ContractError> {
+    // Check if the bridge is paused
+    let is_paused = IS_PAUSED.load(deps.storage)?;
+    if is_paused {
+        return Err(ContractError::BridgePaused { });
+    }
+
     // Check if sender is an operator or admin
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
-    if !check_auth(deps.storage, sender_raw)? {
+    if !check_is_operator(deps.storage, sender_raw)? {
         return Err(ContractError::Unauthorized { });
     }
 
@@ -209,6 +238,12 @@ pub fn try_receive_nft(
     sender: String,
     token_id: String,
 ) -> Result<Response, ContractError> {
+    // Check if the bridge is paused
+    let is_paused = IS_PAUSED.load(deps.storage)?;
+    if is_paused {
+        return Err(ContractError::BridgePaused { });
+    }
+
     // Validate NFT sender
     let sender_addr = deps.api.addr_validate(&sender)?;
 
@@ -240,14 +275,19 @@ pub fn try_receive_nft(
         .add_attribute("history_id", hist_id.to_string()))
 }
 
-fn check_auth(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
+fn check_is_operator(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
     let opers = OPERS.load(store)?;
     if !opers.contains(&sender_raw) {
         // Allow admins to update too
-        let admins = ADMINS.load(store)?;
-        if !admins.contains(&sender_raw) {
-            return Ok(false);
-        }
+        return check_is_admin(store, sender_raw);
+    }
+    Ok(true)
+}
+
+fn check_is_admin(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
+    let admins = ADMINS.load(store)?;
+    if !admins.contains(&sender_raw) {
+        return Ok(false);
     }
     Ok(true)
 }

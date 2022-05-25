@@ -46,6 +46,8 @@ pub const MAX_LIMIT: u8 = 30;
  * Storage 
  */
 
+/// Boolean value that determines whether the bridge can receive and release tokens
+pub const IS_PAUSED: Item<bool> = Item::new("is_paused");
 /// Vector of admins' raw addresses
 pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 /// Vector of operators' raw addresses
