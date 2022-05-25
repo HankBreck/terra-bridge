@@ -191,7 +191,7 @@ impl From<BridgeRecord> for BridgeRecordResponse {
         Self {
             is_released: record.is_released,
             token_id: record.token_id,
-            source_address: source_address,
+            source_address,
             source_collection: record.source_collection.into_string(),
             destination_address: record.destination_address,
             destination_collection: record.destination_collection,

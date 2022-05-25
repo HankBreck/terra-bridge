@@ -169,6 +169,7 @@ pub fn try_update_collection_mappings(
 /// * `coll_addr` - the Terra collection's address
 /// * `recipient` - the Terra address receiving the bridged NFTs
 /// * `token_id` - id of the token being bridged
+#[allow(clippy::too_many_arguments)]
 pub fn try_release_nft(
     deps: DepsMut,
     env: Env,
@@ -198,7 +199,7 @@ pub fn try_release_nft(
     let record = BridgeRecord {
         is_released: true,
         token_id: token_id.to_owned(),
-        source_address: Some(recipient_valid.to_owned()),
+        source_address: Some(recipient_valid),
         source_collection: terra_collection.to_owned(),
         destination_address: Some(sn_sender.to_owned()),
         destination_collection: sn_coll_addr.to_owned(),
