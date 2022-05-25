@@ -58,6 +58,8 @@ pub enum ExecuteMsg {
         sn_address: String,
         /// The token_id for the NFT
         token_id: String,
+        /// True if the recipient address is a smart contract
+        recipient_is_contract: bool,
     },
 
     /// Accept cw721 NFT

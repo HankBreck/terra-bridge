@@ -163,12 +163,13 @@ pub fn try_release_nft(
 
     // Create the "fire and forget" message to transfer ownership
     let msg = if recipient_is_contract { 
-        TransferNft { recipient, token_id }
+        SendNft { contract: recipient.to_owned(), token_id: token_id.to_owned(), msg: Binary::from(vec![]) }
     } else { 
-        SendNft { contract: recipient, token_id, msg: Binary::from(vec![]) }
+        TransferNft { recipient: recipient.to_owned(), token_id: token_id.to_owned() }
     };
+
     let send = WasmMsg::Execute { 
-        contract_addr: terra_collection.into_string(),
+        contract_addr: terra_collection.to_owned().into(),
         msg: to_binary(&msg)?,
         funds: vec![],
     };

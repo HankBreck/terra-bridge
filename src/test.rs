@@ -3,15 +3,16 @@ mod tests {
     use cosmwasm_std::{
         from_binary,
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Api, DepsMut, Response,
+        Addr, Api, DepsMut, Response, WasmMsg, to_binary, SubMsg, CosmosMsg,
     };
+    use cw721::Cw721ExecuteMsg;
 
     use crate::{
         contract::instantiate,
         error::ContractError,
-        execute::{try_update_super_users, try_update_collection_mappings, try_receive_nft},
+        execute::{try_update_super_users, try_update_collection_mappings, try_receive_nft, try_release_nft},
         msg::{AdminsResponse, InstantiateMsg, OperatorsResponse, CollectionMapping, CollectionMappingResponse, HistoryResponse, BridgeRecordResponse},
-        query::{query_admins, query_operators, query_collection_mappings, query_history}, state::BridgeRecord,
+        query::{query_admins, query_operators, query_collection_mappings, query_history},
     };
 
     // Static variables for testing
@@ -378,18 +379,91 @@ mod tests {
     fn release_nft() {
         // Instantiate contract
         let mut deps = mock_dependencies(&[]);
-        let info = mock_info(CREATOR, &[]);
+        let info_success = mock_info(CREATOR, &[]);
         let env = mock_env();
         let initial_admins = get_admins();
         let initial_opers = get_opers();
         do_instantiate(deps.as_mut(), initial_admins.clone(), initial_opers).unwrap();
 
-        /*
-         * Non-operator cannot release an NFT from the bridge
-         */
+        // Generate collection mappings
+        let terra_coll_addr = "terra contract".to_string();
+        let sn_coll_addr = "secret contract".to_string();
+        let add_list = vec![
+            CollectionMapping { source: terra_coll_addr.to_owned(), destination: sn_coll_addr.to_owned() }
+        ];
+        try_update_collection_mappings(deps.as_mut(), info_success.clone(), None, Some(add_list.clone())).unwrap();
 
+        // Send NFT to the contract
+        let info_contract = mock_info(&terra_coll_addr, &[]);
+        let sender = "terra sender".to_string();
+        let token_id = "token_id".to_string();
+        try_receive_nft(deps.as_mut(), env.to_owned(), info_contract, sender, token_id.to_owned()).unwrap();
+        
         /*
-         * Operator can release an NFT from the bridge
-         */
+        * Non-operator cannot release an NFT from the bridge
+        */
+
+        let info_fail = mock_info("not an operator", &[]);
+        let sn_sender = "secret sender".to_string();
+        let recipient = "terra recipient".to_string();
+        let err = try_release_nft(
+            deps.as_mut(), 
+            env.to_owned(), 
+            info_fail, 
+            sn_coll_addr.to_owned(), 
+            sn_sender.to_owned(), 
+            recipient.to_owned(), 
+            token_id.to_owned(), 
+            false
+        ).unwrap_err();
+        assert_eq!(err.to_string(), "Unauthorized");
+        
+        /*
+        * Operator can release an NFT from the bridge
+        */
+
+        let response = try_release_nft(
+            deps.as_mut(), 
+            env, 
+            info_success, 
+            sn_coll_addr.to_owned(), 
+            sn_sender.to_owned(), 
+            recipient.to_owned(), 
+            token_id.to_owned(), 
+            false,
+        ).unwrap();
+        assert_eq!(response.messages.len(), 1);
+
+        // Get the history id to test the response
+        let history_id = response.attributes
+            .last()
+            .unwrap()
+            .value
+            .to_owned();
+
+        // Construct expected WasmMsg
+        let transfer_bin = to_binary(&Cw721ExecuteMsg::TransferNft { 
+            recipient: recipient.to_owned(), 
+            token_id: token_id.to_owned() 
+        }).unwrap();
+        let expected = WasmMsg::Execute { 
+            contract_addr: terra_coll_addr.to_owned(), 
+            msg: transfer_bin, 
+            funds: vec![], 
+        };
+
+        assert_eq!(
+            response,
+            Response::new()
+                .add_message(expected)
+                .add_attribute("action", "transfer_nft")
+                .add_attribute("secret_sender", sn_sender)
+                .add_attribute("recipient", recipient)
+                .add_attribute("terra_collection", terra_coll_addr)
+                .add_attribute("secret_collection", sn_coll_addr)
+                .add_attribute("token_id", token_id)
+                .add_attribute("history_id", history_id.to_string())
+        );
+
     }
 }

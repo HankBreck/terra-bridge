@@ -88,7 +88,8 @@ pub fn execute(
             sn_collection,
             sn_address,
             token_id,
-        } => try_release_nft(deps, env, info, sn_collection, sn_address, recipient, token_id),
+            recipient_is_contract,
+        } => try_release_nft(deps, env, info, sn_collection, sn_address, recipient, token_id, recipient_is_contract),
 
         // Sender must be a cw721 contract
 
