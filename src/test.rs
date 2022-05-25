@@ -10,7 +10,7 @@ mod tests {
     use crate::{
         contract::instantiate,
         error::ContractError,
-        execute::{try_update_super_users, try_update_collection_mappings, try_receive_nft, try_release_nft},
+        execute::{try_update_super_users, try_update_collection_mappings, try_receive_nft, try_release_nft, try_update_pause},
         msg::{AdminsResponse, InstantiateMsg, OperatorsResponse, CollectionMapping, CollectionMappingResponse, HistoryResponse, BridgeRecordResponse},
         query::{query_admins, query_operators, query_collection_mappings, query_history},
     };
@@ -84,11 +84,6 @@ mod tests {
             from_binary::<OperatorsResponse>(&response).unwrap(),
             success_response
         );
-
-        // TODO: check history_pk is 0
-            // Add config to state
-            // Add config query
-            // Add update for pause
     }
 
     #[test]
@@ -328,7 +323,7 @@ mod tests {
     fn receive_nft() {
         // Instantiate contract
         let mut deps = mock_dependencies(&[]);
-        let info = mock_info(CREATOR, &[]);
+        let info_admin = mock_info(CREATOR, &[]);
         let env = mock_env();
         let initial_admins = get_admins();
         let initial_opers = get_opers();
@@ -353,10 +348,10 @@ mod tests {
         let add_list = vec![
             CollectionMapping { source: terra_coll_addr.into(), destination: "secret contract".into() }
         ];
-        try_update_collection_mappings(deps.as_mut(), info.clone(), None, Some(add_list.clone())).unwrap();
+        try_update_collection_mappings(deps.as_mut(), info_admin.clone(), None, Some(add_list.clone())).unwrap();
 
         // Send NFT to the contract
-        try_receive_nft(deps.as_mut(), env.clone(), info_contract, sender, token_id.clone()).unwrap();
+        try_receive_nft(deps.as_mut(), env.clone(), info_contract.clone(), sender.clone(), token_id.clone()).unwrap();
         let response_bin = &query_history(deps.as_ref(), terra_coll_addr.into(), token_id.clone(), None, Some(1u8)).unwrap();
         let response: HistoryResponse = from_binary(&response_bin).unwrap();
 
@@ -364,7 +359,7 @@ mod tests {
         let res_success = HistoryResponse {
             history: vec![ BridgeRecordResponse {
                 is_released: false,
-                token_id: token_id,
+                token_id: token_id.clone(),
                 source_address: Some("terra wallet".into()),
                 source_collection: terra_coll_addr.into(),
                 destination_address: None, 
@@ -374,13 +369,23 @@ mod tests {
             }]
         };
         assert_eq!(response, res_success);
+
+        /*
+         * Receive fails with BridgePaused error when the bridge is paused
+         */
+
+        // Pause the bridge
+        try_update_pause(deps.as_mut(), info_admin, true).unwrap();
+
+        let err = try_receive_nft(deps.as_mut(), env, info_contract, sender, token_id).unwrap_err();
+        assert_eq!(err.to_string(), "Bridge is in the paused state. Tokens cannot be transfered in or out.");
     }
 
     #[test]
     fn release_nft() {
         // Instantiate contract
         let mut deps = mock_dependencies(&[]);
-        let info_success = mock_info(CREATOR, &[]);
+        let info_admin = mock_info(CREATOR, &[]);
         let env = mock_env();
         let initial_admins = get_admins();
         let initial_opers = get_opers();
@@ -392,7 +397,7 @@ mod tests {
         let add_list = vec![
             CollectionMapping { source: terra_coll_addr.to_owned(), destination: sn_coll_addr.to_owned() }
         ];
-        try_update_collection_mappings(deps.as_mut(), info_success.clone(), None, Some(add_list.clone())).unwrap();
+        try_update_collection_mappings(deps.as_mut(), info_admin.clone(), None, Some(add_list.clone())).unwrap();
 
         // Send NFT to the contract
         let info_contract = mock_info(&terra_coll_addr, &[]);
@@ -418,21 +423,16 @@ mod tests {
             false
         ).unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized");
-
-        /*
-         * Operator cannot release an NFT from the bridge when it is paused
-         */
-
-        
         
         /*
         * Operator can release an NFT from the bridge to a non-contract account
         */
 
+        let info_oper = mock_info("tommy", &[]);
         let response = try_release_nft(
             deps.as_mut(), 
-            env, 
-            info_success, 
+            env.to_owned(), 
+            info_oper.to_owned(), 
             sn_coll_addr.to_owned(), 
             sn_sender.to_owned(), 
             recipient.to_owned(), 
@@ -464,17 +464,32 @@ mod tests {
             Response::new()
                 .add_message(expected)
                 .add_attribute("action", "transfer_nft")
-                .add_attribute("secret_sender", sn_sender)
-                .add_attribute("recipient", recipient)
+                .add_attribute("secret_sender", sn_sender.to_owned())
+                .add_attribute("recipient", recipient.to_owned())
                 .add_attribute("terra_collection", terra_coll_addr)
-                .add_attribute("secret_collection", sn_coll_addr)
-                .add_attribute("token_id", token_id)
+                .add_attribute("secret_collection", sn_coll_addr.to_owned())
+                .add_attribute("token_id", token_id.to_owned())
                 .add_attribute("history_id", history_id.to_string())
         );
 
         /*
-        * Operator can release an NFT from the bridge to a contract account
-        */
+         * Operator cannot release an NFT from the bridge when it is paused
+         */
+        
+        // Pause the bridge
+        try_update_pause(deps.as_mut(), info_admin, true).unwrap();
+        
+        let err = try_release_nft(
+            deps.as_mut(), 
+            env, 
+            info_oper, 
+            sn_coll_addr, 
+            sn_sender, 
+            recipient, 
+            token_id, 
+            false
+        ).unwrap_err();
+        assert_eq!(err.to_string(), "Bridge is in the paused state. Tokens cannot be transfered in or out.");
 
     }
 }
