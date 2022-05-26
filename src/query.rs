@@ -78,7 +78,7 @@ pub fn query_history(
     // Fetch history from storage
     let history = HISTORY
         .prefix((source_addr, token_id))
-        .range(deps.storage, start, None, Order::Ascending)
+        .range(deps.storage, start, None, Order::Descending)
         .take(limit)
         // Separate the record from the key
         .map(|pair| Ok(pair?.1.into()))
