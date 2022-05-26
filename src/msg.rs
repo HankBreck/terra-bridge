@@ -202,6 +202,7 @@ impl From<BridgeRecord> for BridgeRecordResponse {
 }
 
 /// TODO: Test migration
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct MigrateMsg {
     pub foo: String,
 }
