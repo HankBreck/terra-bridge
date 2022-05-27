@@ -22,7 +22,7 @@
         "block_height",
         "block_time",
         "destination_collection",
-        "is_released",
+        "is_enter",
         "source_collection",
         "token_id"
       ],
@@ -50,8 +50,8 @@
           "description": "the address of the SN collection",
           "type": "string"
         },
-        "is_released": {
-          "description": "true if the token has been released from the bridge",
+        "is_enter": {
+          "description": "true if the token was received on this transaction",
           "type": "boolean"
         },
         "source_address": {

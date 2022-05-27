@@ -163,7 +163,6 @@ pub struct HistoryResponse {
     pub history: Vec<BridgeRecordResponse>,
 }
 
-// TODO: Convert is_released to is_enter
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct BridgeRecordResponse {
     /// true if the token was received on this transaction
@@ -207,6 +206,4 @@ impl From<BridgeRecord> for BridgeRecordResponse {
 
 /// TODO: Test migration
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct MigrateMsg {
-    pub foo: String,
-}
+pub struct MigrateMsg {}

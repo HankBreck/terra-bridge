@@ -73,6 +73,35 @@
       "additionalProperties": false
     },
     {
+      "description": "Update the state of the bridge",
+      "type": "object",
+      "required": [
+        "update_pause"
+      ],
+      "properties": {
+        "update_pause": {
+          "type": "object",
+          "required": [
+            "pause"
+          ],
+          "properties": {
+            "collection": {
+              "description": "Optional field to pause the bridge for a specific collection",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pause": {
+              "description": "`true` to move the bridge to the paused state, `false` to move the bridge out of the paused stated",
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Update the collection mappings used for whitelist. * to update a collections mapping you can remove the old mapping and add a new mapping in the same message",
       "type": "object",
       "required": [
