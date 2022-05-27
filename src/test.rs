@@ -363,12 +363,14 @@ mod tests {
         let info_contract = mock_info(terra_coll_addr, &[]);
         let sender = "terra wallet".to_string();
         let token_id = "0".to_string();
+        let sn_sender = "secret wallet".to_string();
         let err = try_receive_nft(
             deps.as_mut(),
             env.clone(),
             info_contract.clone(),
             sender.clone(),
             token_id.clone(),
+            to_binary(&sn_sender).unwrap(),
         )
         .unwrap_err();
         assert_eq!(err.to_string(), "Unauthorized collection");
@@ -397,6 +399,7 @@ mod tests {
             info_contract.clone(),
             sender.clone(),
             token_id.clone(),
+            to_binary(&sn_sender).unwrap()
         )
         .unwrap();
         let response_bin = &query_history(
@@ -416,7 +419,7 @@ mod tests {
                 token_id: token_id.clone(),
                 source_address: Some("terra wallet".into()),
                 source_collection: terra_coll_addr.into(),
-                destination_address: None,
+                destination_address: Some(sn_sender.to_owned()),
                 destination_collection: "secret contract".into(),
                 block_height: env.block.height,
                 block_time: env.block.time.seconds(),
@@ -429,9 +432,39 @@ mod tests {
          */
 
         // Pause the bridge
-        try_update_pause(deps.as_mut(), info_admin, true, None).unwrap();
+        try_update_pause(deps.as_mut(), info_admin.to_owned(), true, None).unwrap();
 
-        let err = try_receive_nft(deps.as_mut(), env, info_contract, sender, token_id).unwrap_err();
+        let err = try_receive_nft(
+            deps.as_mut(), 
+            env.to_owned(), 
+            info_contract.to_owned(), 
+            sender.to_owned(), 
+            token_id.to_owned(),
+            to_binary(&sn_sender).unwrap()
+        ).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Bridge is in the paused state. Tokens cannot be transfered in or out."
+        );
+
+        // Unpause the bridge
+        try_update_pause(deps.as_mut(), info_admin.to_owned(), false, None).unwrap();
+
+        /*
+         * Receive fails with BridgePaused error when the bridge is paused by collection
+         */
+
+        // Pause the bridge for only the terra_coll_addr collection
+        try_update_pause(deps.as_mut(), info_admin, true, Some(terra_coll_addr.into())).unwrap();
+
+        let err = try_receive_nft(
+            deps.as_mut(), 
+            env, 
+            info_contract, 
+            sender, 
+            token_id,
+            to_binary(&sn_sender).unwrap()
+        ).unwrap_err();
         assert_eq!(
             err.to_string(),
             "Bridge is in the paused state. Tokens cannot be transfered in or out."
@@ -466,6 +499,7 @@ mod tests {
         // Send NFT to the contract
         let info_contract = mock_info(&terra_coll_addr, &[]);
         let sender = "terra sender".to_string();
+        let sn_sender = "secret sender".to_string();
         let token_id = "token_id".to_string();
         try_receive_nft(
             deps.as_mut(),
@@ -473,6 +507,7 @@ mod tests {
             info_contract,
             sender,
             token_id.to_owned(),
+            to_binary(&sn_sender).unwrap(),
         )
         .unwrap();
 
@@ -481,7 +516,6 @@ mod tests {
          */
 
         let info_fail = mock_info("not an operator", &[]);
-        let sn_sender = "secret sender".to_string();
         let recipient = "terra recipient".to_string();
         let err = try_release_nft(
             deps.as_mut(),
@@ -547,6 +581,32 @@ mod tests {
          */
 
         // Pause the bridge
+        try_update_pause(deps.as_mut(), info_admin.to_owned(), true, None).unwrap();
+
+        let err = try_release_nft(
+            deps.as_mut(),
+            env.to_owned(),
+            info_oper.to_owned(),
+            sn_coll_addr.to_owned(),
+            sn_sender.to_owned(),
+            recipient.to_owned(),
+            token_id.to_owned(),
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Bridge is in the paused state. Tokens cannot be transfered in or out."
+        );
+
+        // Unpause the bridge
+        try_update_pause(deps.as_mut(), info_admin.to_owned(), false, None).unwrap();
+
+        /*
+         * Operator cannot release an NFT from the bridge when it is paused by collection
+         */
+
+        // Pause the bridge for only the terra_coll_addr collection
         try_update_pause(deps.as_mut(), info_admin, true, None).unwrap();
 
         let err = try_release_nft(

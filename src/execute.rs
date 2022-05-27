@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     to_binary, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    WasmMsg, Addr,
+    WasmMsg, Addr, from_binary,
 };
 use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
@@ -266,6 +266,7 @@ pub fn try_receive_nft(
     info: MessageInfo,
     sender: String,
     token_id: String,
+    msg: Binary,
 ) -> Result<Response, ContractError> {
     // Check if the bridge is paused
     let is_paused = check_is_paused(deps.storage, info.sender.to_owned())?;
@@ -275,19 +276,20 @@ pub fn try_receive_nft(
 
     // Validate NFT sender
     let sender_addr = deps.api.addr_validate(&sender)?;
-
+    
     // Check whitelist to see if the collection is mapped to Secret
     let sn_coll_addr = TERRA_TO_SN_MAP
         .may_load(deps.storage, info.sender.to_owned())?
         .ok_or(ContractError::UnauthorizedCollection {})?;
-
+    let sn_sender: String = from_binary(&msg)?;
+    
     // Save history
     let record = BridgeRecord {
         token_id: token_id.to_owned(),
         is_released: false,
         source_address: Some(sender_addr.to_owned()),
         source_collection: info.sender.to_owned(),
-        destination_address: None,
+        destination_address: Some(sn_sender.to_owned()),
         destination_collection: sn_coll_addr.to_owned(),
         block_height: env.block.height,
         block_time: env.block.time.seconds(),
@@ -298,8 +300,9 @@ pub fn try_receive_nft(
 
     Ok(Response::default()
         .add_attribute("action", "receive_nft")
-        .add_attribute("sender", sender_addr)
-        .add_attribute("cosmos_collection_addr", info.sender)
+        .add_attribute("terra_sender", sender_addr)
+        .add_attribute("secret_sender", sn_sender)
+        .add_attribute("terra_collection_addr", info.sender)
         .add_attribute("secret_collection_addr", sn_coll_addr)
         .add_attribute("history_id", hist_id.to_string()))
 }
