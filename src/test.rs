@@ -399,7 +399,7 @@ mod tests {
             info_contract.clone(),
             sender.clone(),
             token_id.clone(),
-            to_binary(&sn_sender).unwrap()
+            to_binary(&sn_sender).unwrap(),
         )
         .unwrap();
         let response_bin = &query_history(
@@ -435,13 +435,14 @@ mod tests {
         try_update_pause(deps.as_mut(), info_admin.to_owned(), true, None).unwrap();
 
         let err = try_receive_nft(
-            deps.as_mut(), 
-            env.to_owned(), 
-            info_contract.to_owned(), 
-            sender.to_owned(), 
+            deps.as_mut(),
+            env.to_owned(),
+            info_contract.to_owned(),
+            sender.to_owned(),
             token_id.to_owned(),
-            to_binary(&sn_sender).unwrap()
-        ).unwrap_err();
+            to_binary(&sn_sender).unwrap(),
+        )
+        .unwrap_err();
         assert_eq!(
             err.to_string(),
             "Bridge is in the paused state. Tokens cannot be transfered in or out."
@@ -455,16 +456,23 @@ mod tests {
          */
 
         // Pause the bridge for only the terra_coll_addr collection
-        try_update_pause(deps.as_mut(), info_admin, true, Some(terra_coll_addr.into())).unwrap();
+        try_update_pause(
+            deps.as_mut(),
+            info_admin,
+            true,
+            Some(terra_coll_addr.into()),
+        )
+        .unwrap();
 
         let err = try_receive_nft(
-            deps.as_mut(), 
-            env, 
-            info_contract, 
-            sender, 
+            deps.as_mut(),
+            env,
+            info_contract,
+            sender,
             token_id,
-            to_binary(&sn_sender).unwrap()
-        ).unwrap_err();
+            to_binary(&sn_sender).unwrap(),
+        )
+        .unwrap_err();
         assert_eq!(
             err.to_string(),
             "Bridge is in the paused state. Tokens cannot be transfered in or out."

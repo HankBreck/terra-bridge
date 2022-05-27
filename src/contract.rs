@@ -76,8 +76,9 @@ pub fn execute(
         }
 
         // Sender must be admin or operator
-
-        ExecuteMsg::UpdatePause { pause, collection } => try_update_pause(deps, info, pause, collection),
+        ExecuteMsg::UpdatePause { pause, collection } => {
+            try_update_pause(deps, info, pause, collection)
+        }
 
         ExecuteMsg::UpdateCollectionMapping { add, remove } => {
             try_update_collection_mappings(deps, info, remove, add)
@@ -101,9 +102,14 @@ pub fn execute(
         ),
 
         // Sender must be a cw721 contract
-        ExecuteMsg::ReceiveNft(receive_msg) => {
-            try_receive_nft(deps, env, info, receive_msg.sender, receive_msg.token_id, receive_msg.msg)
-        }
+        ExecuteMsg::ReceiveNft(receive_msg) => try_receive_nft(
+            deps,
+            env,
+            info,
+            receive_msg.sender,
+            receive_msg.token_id,
+            receive_msg.msg,
+        ),
     }
 }
 

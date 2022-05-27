@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    WasmMsg, Addr, from_binary,
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response,
+    StdResult, Storage, WasmMsg,
 };
 use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
@@ -8,7 +8,8 @@ use crate::{
     error::ContractError,
     msg::CollectionMapping,
     state::{
-        save_history, BridgeRecord, ADMINS, IS_PAUSED, OPERS, SN_TO_TERRA_MAP, TERRA_TO_SN_MAP, IS_COLL_PAUSED,
+        save_history, BridgeRecord, ADMINS, IS_COLL_PAUSED, IS_PAUSED, OPERS, SN_TO_TERRA_MAP,
+        TERRA_TO_SN_MAP,
     },
 };
 
@@ -276,13 +277,13 @@ pub fn try_receive_nft(
 
     // Validate NFT sender
     let sender_addr = deps.api.addr_validate(&sender)?;
-    
+
     // Check whitelist to see if the collection is mapped to Secret
     let sn_coll_addr = TERRA_TO_SN_MAP
         .may_load(deps.storage, info.sender.to_owned())?
         .ok_or(ContractError::UnauthorizedCollection {})?;
     let sn_sender: String = from_binary(&msg)?;
-    
+
     // Save history
     let record = BridgeRecord {
         token_id: token_id.to_owned(),

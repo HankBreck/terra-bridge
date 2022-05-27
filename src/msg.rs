@@ -19,7 +19,6 @@ pub enum ExecuteMsg {
     /*
      * Admin messages
      */
-
     /// Update the contract's admins
     UpdateAdmins {
         /// The addresses to add
@@ -48,7 +47,6 @@ pub enum ExecuteMsg {
     /*
      * Operator messages
      */
-
     /// Update the collection mappings used for whitelist.
     /// * to update a collections mapping you can remove the old mapping and add a new mapping in the same message
     UpdateCollectionMapping {
