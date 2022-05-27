@@ -19,6 +19,7 @@ pub enum ExecuteMsg {
     /*
      * Admin messages
      */
+
     /// Update the contract's admins
     UpdateAdmins {
         /// The addresses to add
@@ -40,11 +41,14 @@ pub enum ExecuteMsg {
         /// `true` to move the bridge to the paused state,
         /// `false` to move the bridge out of the paused stated
         pause: bool,
+        /// Optional field to pause the bridge for a specific collection
+        collection: Option<String>,
     },
 
     /*
      * Operator messages
      */
+
     /// Update the collection mappings used for whitelist.
     /// * to update a collections mapping you can remove the old mapping and add a new mapping in the same message
     UpdateCollectionMapping {

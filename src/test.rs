@@ -429,7 +429,7 @@ mod tests {
          */
 
         // Pause the bridge
-        try_update_pause(deps.as_mut(), info_admin, true).unwrap();
+        try_update_pause(deps.as_mut(), info_admin, true, None).unwrap();
 
         let err = try_receive_nft(deps.as_mut(), env, info_contract, sender, token_id).unwrap_err();
         assert_eq!(
@@ -547,7 +547,7 @@ mod tests {
          */
 
         // Pause the bridge
-        try_update_pause(deps.as_mut(), info_admin, true).unwrap();
+        try_update_pause(deps.as_mut(), info_admin, true, None).unwrap();
 
         let err = try_release_nft(
             deps.as_mut(),

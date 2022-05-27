@@ -76,7 +76,8 @@ pub fn execute(
         }
 
         // Sender must be admin or operator
-        ExecuteMsg::UpdatePause { pause } => try_update_pause(deps, info, pause),
+        
+        ExecuteMsg::UpdatePause { pause, collection } => try_update_pause(deps, info, pause, collection),
 
         ExecuteMsg::UpdateCollectionMapping { add, remove } => {
             try_update_collection_mappings(deps, info, remove, add)

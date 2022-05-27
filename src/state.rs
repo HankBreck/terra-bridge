@@ -50,13 +50,17 @@ pub const MAX_LIMIT: u8 = 30;
 
 /// Boolean value that determines whether the bridge can receive and release tokens
 pub const IS_PAUSED: Item<bool> = Item::new("is_paused");
+/// Mapping of a Terra collection's address to a bool determining if the NFTs
+/// from that collection can be received or released
+pub const IS_COLL_PAUSED: Map<Addr, bool> = Map::new("is_coll_paused");
 /// Vector of admins' raw addresses
 pub const ADMINS: Item<Vec<CanonicalAddr>> = Item::new("admins");
 /// Vector of operators' raw addresses
 pub const OPERS: Item<Vec<CanonicalAddr>> = Item::new("operators");
-/// Mapping of a Terra contract's address to a Secret Network contract's address
+/// Mapping of a Terra collection's address to a Secret Network collection's address
 pub const TERRA_TO_SN_MAP: Map<Addr, String> = Map::new("t_to_s");
-/// Mapping of a Terra contract's address to a Secret Network contract's address
+/// Mapping of a Terra collection's address to a Secret Network collection's address.
+/// Used for reverse look ups
 pub const SN_TO_TERRA_MAP: Map<String, Addr> = Map::new("s_to_t");
 /// Mapping of a Terra contract and token id to the number of TX records for that pair
 pub const HISTORY_COUNT: Map<(Addr, String), u64> = Map::new("history_pk");

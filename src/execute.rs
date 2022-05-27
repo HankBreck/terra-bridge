@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     to_binary, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    WasmMsg,
+    WasmMsg, Addr,
 };
 use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
@@ -8,7 +8,7 @@ use crate::{
     error::ContractError,
     msg::CollectionMapping,
     state::{
-        save_history, BridgeRecord, ADMINS, IS_PAUSED, OPERS, SN_TO_TERRA_MAP, TERRA_TO_SN_MAP,
+        save_history, BridgeRecord, ADMINS, IS_PAUSED, OPERS, SN_TO_TERRA_MAP, TERRA_TO_SN_MAP, IS_COLL_PAUSED,
     },
 };
 
@@ -84,6 +84,7 @@ pub fn try_update_pause(
     deps: DepsMut,
     info: MessageInfo,
     pause: bool,
+    collection: Option<String>,
 ) -> Result<Response, ContractError> {
     // Verify sender is an admin
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
@@ -92,7 +93,13 @@ pub fn try_update_pause(
     }
 
     // Update state with the new value
-    IS_PAUSED.save(deps.storage, &pause)?;
+    if let Some(coll) = collection {
+        // Verify the collection is valid
+        let coll_valid = deps.api.addr_validate(&coll)?;
+        IS_COLL_PAUSED.save(deps.storage, coll_valid, &pause)?;
+    } else {
+        IS_PAUSED.save(deps.storage, &pause)?;
+    }
 
     Ok(Response::new()
         .add_attribute("action", "update_pause")
@@ -180,12 +187,6 @@ pub fn try_release_nft(
     token_id: String,
     recipient_is_contract: bool,
 ) -> Result<Response, ContractError> {
-    // Check if the bridge is paused
-    let is_paused = IS_PAUSED.load(deps.storage)?;
-    if is_paused {
-        return Err(ContractError::BridgePaused {});
-    }
-
     // Check if sender is an operator or admin
     let sender_raw = deps.api.addr_canonicalize(info.sender.as_str())?;
     if !check_is_operator(deps.storage, sender_raw)? {
@@ -194,6 +195,12 @@ pub fn try_release_nft(
 
     let recipient_valid = deps.api.addr_validate(&recipient)?;
     let terra_collection = SN_TO_TERRA_MAP.load(deps.storage, sn_coll_addr.to_owned())?;
+
+    // Check if the bridge is paused
+    let is_paused = check_is_paused(deps.storage, terra_collection.to_owned())?;
+    if is_paused {
+        return Err(ContractError::BridgePaused {});
+    }
 
     // Create & save history
     let record = BridgeRecord {
@@ -261,7 +268,7 @@ pub fn try_receive_nft(
     token_id: String,
 ) -> Result<Response, ContractError> {
     // Check if the bridge is paused
-    let is_paused = IS_PAUSED.load(deps.storage)?;
+    let is_paused = check_is_paused(deps.storage, info.sender.to_owned())?;
     if is_paused {
         return Err(ContractError::BridgePaused {});
     }
@@ -295,6 +302,16 @@ pub fn try_receive_nft(
         .add_attribute("cosmos_collection_addr", info.sender)
         .add_attribute("secret_collection_addr", sn_coll_addr)
         .add_attribute("history_id", hist_id.to_string()))
+}
+
+fn check_is_paused(store: &dyn Storage, coll_addr: Addr) -> StdResult<bool> {
+    let is_paused = IS_PAUSED.load(store)?;
+    if !is_paused {
+        // Only return false when is_paused and is_coll_paused are false
+        let is_coll_paused = IS_COLL_PAUSED.may_load(store, coll_addr)?;
+        return Ok(is_coll_paused.unwrap_or(false));
+    }
+    Ok(true)
 }
 
 fn check_is_operator(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
