@@ -2,6 +2,9 @@
 /target
 /artifacts
 
+# Lock file
+Cargo.lock
+
 # Clutter
 .vscode
 .DS_STORE
