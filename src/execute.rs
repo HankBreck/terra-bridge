@@ -204,7 +204,7 @@ pub fn try_release_nft(
 
     // Create & save history
     let record = BridgeRecord {
-        is_released: true,
+        is_enter: false,
         token_id: token_id.to_owned(),
         source_address: Some(recipient_valid),
         source_collection: terra_collection.to_owned(),
@@ -286,7 +286,7 @@ pub fn try_receive_nft(
     // Save history
     let record = BridgeRecord {
         token_id: token_id.to_owned(),
-        is_released: false,
+        is_enter: true,
         source_address: Some(sender_addr.to_owned()),
         source_collection: info.sender.to_owned(),
         destination_address: Some(sn_sender.to_owned()),

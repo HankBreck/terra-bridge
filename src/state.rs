@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 /// Storage for the history of a tokens bridging activity
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BridgeRecord {
-    /// true if the token has been released from the bridge
-    pub is_released: bool,
+    /// true if the token was received on this transaction
+    pub is_enter: bool,
     /// id of bridged token
     pub token_id: String,
     /// the Terra address that initiated the SendMsg request

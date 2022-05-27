@@ -166,8 +166,8 @@ pub struct HistoryResponse {
 // TODO: Convert is_released to is_enter
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct BridgeRecordResponse {
-    /// true if the token has been released from the bridge
-    pub is_released: bool,
+    /// true if the token was received on this transaction
+    pub is_enter: bool,
     /// id of bridged token
     pub token_id: String,
     /// the Terra address that initiated the SendMsg request
@@ -193,7 +193,7 @@ impl From<BridgeRecord> for BridgeRecordResponse {
         }
 
         Self {
-            is_released: record.is_released,
+            is_enter: record.is_enter,
             token_id: record.token_id,
             source_address,
             source_collection: record.source_collection.into_string(),

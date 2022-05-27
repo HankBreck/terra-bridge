@@ -415,7 +415,7 @@ mod tests {
         // Verify success
         let res_success = HistoryResponse {
             history: vec![BridgeRecordResponse {
-                is_released: false,
+                is_enter: true,
                 token_id: token_id.clone(),
                 source_address: Some("terra wallet".into()),
                 source_collection: terra_coll_addr.into(),
