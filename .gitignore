@@ -3,7 +3,7 @@
 /artifacts
 
 # Lock file
-Cargo.lock
+/Cargo.lock
 
 # Clutter
 .vscode
