@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response,
-    StdResult, Storage, WasmMsg,
+    from_binary, to_binary, Binary, CanonicalAddr, DepsMut, Env, MessageInfo, Response, StdResult,
+    WasmMsg,
 };
 use cw721::Cw721ExecuteMsg::{SendNft, TransferNft};
 
@@ -11,6 +11,7 @@ use crate::{
         save_history, BridgeRecord, ADMINS, IS_COLL_PAUSED, IS_PAUSED, OPERS, SN_TO_TERRA_MAP,
         TERRA_TO_SN_MAP,
     },
+    utils::{check_is_admin, check_is_operator, check_is_paused},
 };
 
 /// Allows operators to release NFTs from bridge escrow.
@@ -81,6 +82,14 @@ pub fn try_update_super_users(
     Ok(Response::default().add_attribute("action", action))
 }
 
+/// Fetches all admins
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
+/// * `info` - Extern containing all the contract's external dependencies
+/// * `pause` - Extern containing all the contract's external dependencies
+/// * `collection` - Extern containing all the contract's external dependencies
 pub fn try_update_pause(
     deps: DepsMut,
     info: MessageInfo,
@@ -306,31 +315,4 @@ pub fn try_receive_nft(
         .add_attribute("terra_collection_addr", info.sender)
         .add_attribute("secret_collection_addr", sn_coll_addr)
         .add_attribute("history_id", hist_id.to_string()))
-}
-
-fn check_is_paused(store: &dyn Storage, coll_addr: Addr) -> StdResult<bool> {
-    let is_paused = IS_PAUSED.load(store)?;
-    if !is_paused {
-        // Only return false when is_paused and is_coll_paused are false
-        let is_coll_paused = IS_COLL_PAUSED.may_load(store, coll_addr)?;
-        return Ok(is_coll_paused.unwrap_or(false));
-    }
-    Ok(true)
-}
-
-fn check_is_operator(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
-    let opers = OPERS.load(store)?;
-    if !opers.contains(&sender_raw) {
-        // Allow admins to update too
-        return check_is_admin(store, sender_raw);
-    }
-    Ok(true)
-}
-
-fn check_is_admin(store: &dyn Storage, sender_raw: CanonicalAddr) -> StdResult<bool> {
-    let admins = ADMINS.load(store)?;
-    if !admins.contains(&sender_raw) {
-        return Ok(false);
-    }
-    Ok(true)
 }

@@ -17,7 +17,10 @@ use crate::{
  */
 
 /// Fetches all admins
-/// ADD REAL DOCS
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
 pub fn query_admins(deps: Deps) -> Result<Binary, ContractError> {
     let admins: Vec<CanonicalAddr> = ADMINS.load(deps.storage)?;
     let resp = AdminsResponse {
@@ -30,7 +33,10 @@ pub fn query_admins(deps: Deps) -> Result<Binary, ContractError> {
 }
 
 /// Fetches all operators
-/// ADD REAL DOCS
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
 pub fn query_operators(deps: Deps) -> Result<Binary, ContractError> {
     let operators: Vec<CanonicalAddr> = OPERS.load(deps.storage)?;
     let resp = OperatorsResponse {
@@ -42,6 +48,12 @@ pub fn query_operators(deps: Deps) -> Result<Binary, ContractError> {
     Ok(to_binary(&resp)?)
 }
 
+/// Fetches the destination addresses that correspond to the `source_contracts`
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
+/// * `source_contracts` - List of Terra collection addresses
 pub fn query_collection_mappings(
     deps: Deps,
     source_contracts: Vec<String>,
@@ -63,7 +75,14 @@ pub fn query_collection_mappings(
 }
 
 /// Fetches the history for a single token
-/// ADD REAL DOCS
+///
+/// # Arguments
+///
+/// * `deps` - Extern containing all the contract's external dependencies
+/// * `collection_address` - The Terra collection's address
+/// * `token_id` - ID of the token to fetch the history for
+/// * `start_after` - The last index of the last token receieved in the previous query. Used in pagination.
+/// * `limit` - The maximum number of records to fetch. Used in pagination
 pub fn query_history(
     deps: Deps,
     collection_address: String,

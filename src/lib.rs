@@ -4,6 +4,7 @@ pub mod execute;
 pub mod msg;
 pub mod query;
 pub mod state;
+pub mod utils;
 
 #[cfg(test)]
 pub mod test;
